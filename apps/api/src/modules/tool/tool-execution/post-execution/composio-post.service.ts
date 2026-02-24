@@ -214,6 +214,7 @@ export class ComposioToolPostHandlerService implements IToolPostHandler {
     const composioInput = input as ComposioPostHandlerInput;
     const { toolName, toolsetKey, rawResult, context } = input;
     const creditCost = composioInput.creditCost ?? 3;
+    const toolCallId = composioInput.toolCallId;
     const maxTokens = input.maxTokens ?? DEFAULT_MAX_TOKENS;
 
     try {
@@ -229,6 +230,7 @@ export class ComposioToolPostHandlerService implements IToolPostHandler {
           creditCost,
           resultId: context.resultId,
           resultVersion: context.resultVersion,
+          toolCallId,
         });
       }
 
@@ -765,8 +767,9 @@ export class ComposioToolPostHandlerService implements IToolPostHandler {
     creditCost: number;
     resultId: string;
     resultVersion: number;
+    toolCallId?: string;
   }): Promise<void> {
-    const { user, toolName, toolsetKey, creditCost, resultId, resultVersion } = args;
+    const { user, toolName, toolsetKey, creditCost, resultId, resultVersion, toolCallId } = args;
 
     try {
       await this.billingService.processBilling({
@@ -777,6 +780,7 @@ export class ComposioToolPostHandlerService implements IToolPostHandler {
         originalPrice: creditCost,
         resultId,
         version: resultVersion,
+        toolCallId,
       });
 
       this.logger.debug(`Billing processed: ${creditCost} credits for ${toolsetKey}.${toolName}`);

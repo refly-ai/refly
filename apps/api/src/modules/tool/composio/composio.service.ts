@@ -606,7 +606,7 @@ export class ComposioService {
       schema: toolSchema,
       func: async (
         input: Record<string, unknown>,
-        _runManager: unknown,
+        runManager: unknown,
         runnableConfig: RunnableConfig,
       ) => {
         let cleanup: (() => Promise<void>) | undefined;
@@ -616,6 +616,9 @@ export class ComposioService {
 
           // Extract file_name_title before calling Composio API (it's not part of the actual schema)
           const { file_name_title, ...toolInput } = inputRecord;
+
+          // Extract toolCallId from runManager for billing tracking
+          const toolCallId = (runManager as any)?.runId as string | undefined;
 
           // Run tool execution within context (similar to dynamic-tooling)
           const { result, user, resultId, version, canvasId } = await runInContext(
@@ -683,6 +686,7 @@ export class ComposioService {
             creditCost: context.creditCost,
             toolsetName: context.toolsetName,
             fileNameTitle: (file_name_title as string) || 'untitled',
+            toolCallId,
             context: {
               user,
               resultId,

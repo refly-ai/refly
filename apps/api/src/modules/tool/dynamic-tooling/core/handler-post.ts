@@ -76,6 +76,7 @@ export function createBasePostHandler(
             'unknown_toolset',
           billingConfig: config.billing,
           params: request.params,
+          toolCallId: request.metadata?.toolCallId as string | undefined,
         });
 
         if (billingResult.discountedPrice > 0) {
