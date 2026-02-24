@@ -1,0 +1,103 @@
+replicaCount: 2
+
+image:
+  repository: 186593931982.dkr.ecr.us-east-1.amazonaws.com/refly-api
+  tag: nightly
+  pullPolicy: Always
+
+imagePullSecrets:
+  - name: refly-ecr
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: false
+  name: refly-api
+
+podLabels:
+  app: refly-api
+
+podSecurityContext: {}
+securityContext: {}
+
+containerPorts:
+  - 1234
+  - 3000
+
+env:
+  - name: NODE_ENV
+    value: "production"
+  - name: GOOGLE_APPLICATION_CREDENTIALS
+    value: "/var/secrets/google/credentials.json"
+
+envFrom:
+  configMapRef:
+    name: refly-api-configmap
+  secretRefs:
+    - refly-api-secrets
+
+resources:
+  limits:
+    cpu: "1000m"
+    memory: "1Gi"
+  requests:
+    cpu: "250m"
+    memory: "256Mi"
+
+volumes:
+  - name: gcp-credentials
+    secret:
+      secretName: gcp-credentials
+
+volumeMounts:
+  - name: gcp-credentials
+    mountPath: /var/secrets/google
+    readOnly: true
+
+probes:
+  startup:
+    enabled: true
+    spec:
+      httpGet:
+        path: /
+        port: 3000
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 2
+      failureThreshold: 30
+  readiness:
+    enabled: true
+    spec:
+      httpGet:
+        path: /
+        port: 3000
+      initialDelaySeconds: 10
+      periodSeconds: 5
+  liveness:
+    enabled: true
+    spec:
+      httpGet:
+        path: /
+        port: 3000
+      initialDelaySeconds: 15
+      periodSeconds: 10
+
+deploymentStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 1
+minReadySeconds: 0
+
+service:
+  type: ClusterIP
+  ports:
+    - name: http
+      protocol: TCP
+      port: 3000
+      targetPort: 3000
+    - name: ws
+      protocol: TCP
+      port: 1234
+      targetPort: 1234

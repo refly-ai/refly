@@ -69,6 +69,11 @@ export interface ProcessBillingOptions {
    * Result version from context (optional, falls back to context if not provided)
    */
   version?: number;
+
+  /**
+   * Tool call ID (for PTC mode, must be explicitly provided)
+   */
+  toolCallId?: string;
 }
 
 /**
