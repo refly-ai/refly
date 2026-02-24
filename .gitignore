@@ -65,3 +65,4 @@ apps/api/load-tests/results/*.txt
 # Helm dependency artifacts (Chart.lock handled separately)
 deploy/helm/**/charts/*.tgz
 deploy/helm/**/charts/**/*.tgz
+dump.rdb
