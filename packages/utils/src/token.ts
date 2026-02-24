@@ -29,27 +29,31 @@ export async function initTokenizer(): Promise<void> {
   }
 
   initPromise = (async () => {
-    const response = await fetch(MODEL_URL);
-    if (!response.ok) {
-      throw new Error(
-        `Failed to download tokenizer model: ${response.status} ${response.statusText}`,
+    try {
+      const response = await fetch(MODEL_URL);
+      if (!response.ok) {
+        throw new Error(
+          `Failed to download tokenizer model: ${response.status} ${response.statusText}`,
+        );
+      }
+      const arrayBuffer = await response.arrayBuffer();
+      const model = Buffer.from(arrayBuffer);
+      encoder = new Kitoken(model);
+    } catch (err) {
+      console.warn(
+        `Failed to initialize tokenizer from CDN: ${err}. Token counting will use character-based estimation.`,
       );
+      initPromise = null;
     }
-    const arrayBuffer = await response.arrayBuffer();
-    const model = Buffer.from(arrayBuffer);
-    encoder = new Kitoken(model);
   })();
 
   return initPromise;
 }
 
 /**
- * Get the encoder instance, throws if not initialized
+ * Get the encoder instance, returns null if not initialized
  */
-function getEncoder(): Kitoken {
-  if (!encoder) {
-    throw new Error('Tokenizer not initialized. Call initTokenizer() first.');
-  }
+function getEncoder(): Kitoken | null {
   return encoder;
 }
 
@@ -66,11 +70,16 @@ function getEncoder(): Kitoken {
 export const countToken = (content: string): number => {
   if (!content) return 0;
 
+  const enc = getEncoder();
+  if (!enc) {
+    return Math.ceil(content.length / DEFAULT_CHARS_PER_TOKEN);
+  }
+
   const len = content.length;
 
   // Small content: direct encode (accurate)
   if (len < SMALL_CONTENT_THRESHOLD) {
-    return getEncoder().encode(content, false).length;
+    return enc.encode(content, false).length;
   }
 
   // Large content: median integration estimation (O(1))
@@ -83,7 +92,11 @@ export const countToken = (content: string): number => {
  */
 export const countTokenAccurate = (content: string): number => {
   if (!content) return 0;
-  return getEncoder().encode(content, false).length;
+  const enc = getEncoder();
+  if (!enc) {
+    return Math.ceil(content.length / DEFAULT_CHARS_PER_TOKEN);
+  }
+  return enc.encode(content, false).length;
 };
 
 /**
@@ -96,11 +109,22 @@ export const countTokenAccurate = (content: string): number => {
  * @see https://github.com/refly-ai/truncate-benchmark/blob/main/README.md
  */
 export const truncateContent = (content: string, targetTokens: number): string => {
+  const enc = getEncoder();
   const len = content.length;
+
+  // Fallback: character-based truncation when encoder unavailable
+  if (!enc) {
+    const maxChars = Math.floor(targetTokens * DEFAULT_CHARS_PER_TOKEN);
+    if (len <= maxChars) return content;
+    const availableChars = maxChars - SEPARATOR.length;
+    const headChars = Math.floor(availableChars * HEAD_RATIO);
+    const tailChars = availableChars - headChars;
+    return `${content.slice(0, headChars)}${SEPARATOR}${tailChars > 0 ? content.slice(-tailChars) : ''}`;
+  }
 
   // Small content: use direct token slicing (accurate)
   if (len < SMALL_CONTENT_THRESHOLD) {
-    const tokens = getEncoder().encode(content, false);
+    const tokens = enc.encode(content, false);
     if (tokens.length <= targetTokens) {
       return content;
     }
@@ -109,12 +133,10 @@ export const truncateContent = (content: string, targetTokens: number): string =
     const headTokens = Math.floor(availableTokens * HEAD_RATIO);
     const tailTokens = availableTokens - headTokens;
 
-    const head = textDecoder.decode(
-      getEncoder().decode(new Uint32Array(tokens.slice(0, headTokens))),
-    );
+    const head = textDecoder.decode(enc.decode(new Uint32Array(tokens.slice(0, headTokens))));
     const tail =
       tailTokens > 0
-        ? textDecoder.decode(getEncoder().decode(new Uint32Array(tokens.slice(-tailTokens))))
+        ? textDecoder.decode(enc.decode(new Uint32Array(tokens.slice(-tailTokens))))
         : '';
 
     return `${head}${SEPARATOR}${tail}`;
@@ -169,7 +191,9 @@ function integrationSearch(content: string, targetTokens: number, fromEnd: boole
       regionStart + Math.floor(((regionLen - quickSampleSize) * i) / (quickSampleCount - 1 || 1));
     sampledText += content.slice(pos, Math.min(pos + quickSampleSize, len));
   }
-  const totalTokens = getEncoder().encode(sampledText, false).length;
+  const totalTokens =
+    getEncoder()?.encode(sampledText, false).length ??
+    Math.ceil(sampledText.length / DEFAULT_CHARS_PER_TOKEN);
   const avgDensity = totalTokens > 0 ? sampledText.length / totalTokens : DEFAULT_CHARS_PER_TOKEN;
 
   // Estimate max chars needed with 50% margin
@@ -190,7 +214,9 @@ function integrationSearch(content: string, targetTokens: number, fromEnd: boole
     const sampleStart = Math.max(0, actualPos - sampleSize / 2);
     const sampleEnd = Math.min(len, sampleStart + sampleSize);
     const sample = content.slice(sampleStart, sampleEnd);
-    const tokens = getEncoder().encode(sample, false).length;
+    const tokens =
+      getEncoder()?.encode(sample, false).length ??
+      Math.ceil(sample.length / DEFAULT_CHARS_PER_TOKEN);
     const density = tokens > 0 ? sample.length / tokens : DEFAULT_CHARS_PER_TOKEN;
     return 1 / density;
   };
@@ -245,7 +271,9 @@ function countTokenMedianIntegration(content: string): number {
     const sampleEnd = sampleStart + sampleSize;
     const sample = content.slice(sampleStart, sampleEnd);
     if (sample.length === 0) return 1 / DEFAULT_CHARS_PER_TOKEN;
-    const tokens = getEncoder().encode(sample, false).length;
+    const tokens =
+      getEncoder()?.encode(sample, false).length ??
+      Math.ceil(sample.length / DEFAULT_CHARS_PER_TOKEN);
     return tokens > 0 ? tokens / sample.length : 1 / DEFAULT_CHARS_PER_TOKEN;
   };
 

@@ -71,6 +71,20 @@
     "*.{js,jsx,ts,tsx,json}": "biome check --write --unsafe --no-errors-on-unmatched"
   },
   "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "prisma",
+      "@swc/core",
+      "esbuild",
+      "sharp",
+      "argon2",
+      "protobufjs",
+      "@biomejs/biome",
+      "@nestjs/core",
+      "nestjs-pino",
+      "msgpackr-extract"
+    ],
     "overrides": {
       "node-abi": "4.9.0",
       "prosemirror-model": "1.25.2",
