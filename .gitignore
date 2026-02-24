@@ -27,7 +27,6 @@ common/deploy/
 common/temp/
 common/autoinstallers/*/.npmrc
 **/.rush/temp/
-*.lock
 *.log
 *.chunks.jsonl
 
@@ -62,3 +61,7 @@ docs/.vitepress/cache/*
 apps/api/load-tests/results/*.json
 apps/api/load-tests/results/*.txt
 .playwright-mcp/*
+
+# Helm dependency artifacts (Chart.lock handled separately)
+deploy/helm/**/charts/*.tgz
+deploy/helm/**/charts/**/*.tgz

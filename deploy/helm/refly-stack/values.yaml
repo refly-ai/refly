@@ -1,0 +1,22 @@
+refly-api:
+  enabled: true
+
+refly-web:
+  enabled: true
+
+refly-ingress:
+  enabled: true
+
+redis:
+  enabled: false
+  fullnameOverride: ""
+  auth:
+    enabled: false
+
+postgresql:
+  enabled: false
+  fullnameOverride: ""
+  auth:
+    username: refly
+    password: refly
+    database: refly

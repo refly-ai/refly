@@ -1,0 +1,6 @@
+apiVersion: v2
+name: refly-api
+description: Refly API (test) - Deployment and Service
+type: application
+version: 0.1.0
+appVersion: "nightly"
