@@ -125,13 +125,23 @@ export class Agent extends BaseSkill {
     } = config.configurable;
     const { optimizedQuery, context, sources, usedChatHistory } = preprocessResult;
 
-    const systemPrompt =
-      mode === 'copilot_agent'
-        ? buildWorkflowCopilotPrompt({
-            installedToolsets: config.configurable.installedToolsets ?? [],
-            webSearchEnabled: config.configurable.webSearchEnabled ?? false,
-          })
-        : buildNodeAgentSystemPrompt({ ptcEnabled, ptcContext });
+    const evalCtx = (config.configurable as any)?.__evalContext;
+    let systemPrompt: string;
+
+    if (evalCtx?.systemPromptOverride) {
+      systemPrompt = evalCtx.systemPromptOverride;
+    } else {
+      systemPrompt =
+        mode === 'copilot_agent'
+          ? buildWorkflowCopilotPrompt({
+              installedToolsets: config.configurable.installedToolsets ?? [],
+              webSearchEnabled: config.configurable.webSearchEnabled ?? false,
+            })
+          : buildNodeAgentSystemPrompt({ ptcEnabled, ptcContext });
+      if (evalCtx?.systemPromptAppend) {
+        systemPrompt += `\n\n${evalCtx.systemPromptAppend}`;
+      }
+    }
 
     // Use copilot scene for copilot_agent mode, agent scene for node_agent mode, otherwise use chat scene
     const modelConfigScene = getModelSceneFromMode(mode);
