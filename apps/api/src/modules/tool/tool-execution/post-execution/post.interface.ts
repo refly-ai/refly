@@ -49,6 +49,8 @@ export interface ComposioPostHandlerInput extends PostHandlerInput {
   creditCost?: number;
   /** File name title for uploads */
   fileNameTitle?: string;
+  /** Tool call ID for billing tracking */
+  toolCallId?: string;
 }
 
 /**

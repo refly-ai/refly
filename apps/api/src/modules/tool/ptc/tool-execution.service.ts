@@ -151,7 +151,14 @@ export class ToolExecutionService {
       switch (toolInfo.type) {
         case 'composio_oauth':
         case 'composio_apikey':
-          result = await this.executeComposioTool(toolInfo, toolName, args ?? {});
+          result = await this.executeComposioTool(
+            user,
+            toolInfo,
+            toolName,
+            args ?? {},
+            ptcContext,
+            callId,
+          );
           break;
 
         case 'config_based':
@@ -161,6 +168,7 @@ export class ToolExecutionService {
             toolName,
             args ?? {},
             ptcContext,
+            callId,
           );
           break;
 
@@ -171,6 +179,7 @@ export class ToolExecutionService {
             toolName,
             args ?? {},
             ptcContext,
+            callId,
           );
           break;
 
@@ -301,15 +310,19 @@ export class ToolExecutionService {
   /**
    * Execute a Composio tool (OAuth or API Key)
    *
+   * @param user - The user executing the tool (for billing purposes)
    * @param toolInfo - Tool identification info
    * @param toolName - Tool method name
    * @param args - Tool arguments
    * @returns Execution result
    */
   private async executeComposioTool(
+    user: User,
     toolInfo: ToolIdentification,
     toolName: string,
     args: Record<string, unknown>,
+    ptcContext?: PtcToolExecuteContext,
+    toolCallId?: string,
   ): Promise<Record<string, unknown>> {
     if (!toolInfo.connectedAccountId || !toolInfo.userId) {
       throw new ParamsError('Missing connection info for Composio tool execution');
@@ -321,6 +334,30 @@ export class ToolExecutionService {
       toolName,
       args,
     );
+
+    // Process billing for Composio tools (if successful)
+    const toolsetKey = toolInfo.toolsetKey ?? 'composio';
+    const creditCost = 3; // Default credit cost for Composio tools
+
+    if (result.successful && creditCost > 0) {
+      try {
+        await this.billingService.processBilling({
+          uid: user.uid,
+          toolName,
+          toolsetKey,
+          discountedPrice: creditCost,
+          originalPrice: creditCost,
+          resultId: ptcContext?.resultId,
+          version: ptcContext?.version,
+          toolCallId: toolCallId,
+        });
+      } catch (billingError) {
+        this.logger.error(
+          `Billing failed for ${toolsetKey}.${toolName}: ${billingError instanceof Error ? billingError.message : String(billingError)}`,
+        );
+        // Don't throw - billing failure should not fail the tool execution
+      }
+    }
 
     // Return the result data
     // Composio tools return { successful: boolean, data: any, error?: string }
@@ -353,6 +390,7 @@ export class ToolExecutionService {
     toolName: string,
     args: Record<string, unknown>,
     ptcContext?: PtcToolExecuteContext,
+    toolCallId?: string,
   ): Promise<Record<string, unknown>> {
     // Step 1: Load tool configuration from inventory
     const config = await this.inventoryService.getInventoryWithMethods(toolsetKey);
@@ -391,11 +429,20 @@ export class ToolExecutionService {
 
     const toolNameValue = parsedMethod?.name ?? '';
     const toolsetKeyValue = config?.inventoryKey ?? '';
+
+    // Add toolCallId to request metadata for billing tracking
+    if (toolCallId) {
+      request.metadata = {
+        ...request.metadata,
+        toolCallId,
+      };
+    }
+
     const response = await runInContext(
       {
         langchainConfig: runnableConfig,
         requestId: `ptc-${toolsetKeyValue}-${toolNameValue}-${Date.now()}`,
-        metadata: { toolName: toolNameValue, toolsetKey: toolsetKeyValue },
+        metadata: { toolName: toolNameValue, toolsetKey: toolsetKeyValue, toolCallId },
       },
       async () => handler.handle(request),
     );
@@ -539,6 +586,7 @@ export class ToolExecutionService {
     toolName: string,
     args: Record<string, unknown>,
     ptcContext?: PtcToolExecuteContext,
+    toolCallId?: string,
   ): Promise<Record<string, unknown>> {
     const userId = user?.uid;
     if (!userId) {
@@ -618,6 +666,7 @@ export class ToolExecutionService {
           originalPrice: creditCost,
           resultId: ptcContext?.resultId,
           version: ptcContext?.version,
+          toolCallId: toolCallId,
         });
       } catch (billingError) {
         this.logger.error(

@@ -934,6 +934,8 @@ export class CreditService {
         usageType: 'tool_call',
         createdAt: timestamp,
         description: `Tool call: ${toolCallMeta?.toolsetKey}.${toolCallMeta?.toolName}`,
+        toolCallId: data.toolCallId,
+        toolCallMeta: toolCallMeta,
       },
       originalPrice,
     );

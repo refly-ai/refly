@@ -83,7 +83,7 @@ export class BillingService {
         timestamp: new Date(),
         resultId: options.resultId ?? getResultId(),
         version: options.version ?? getResultVersion(),
-        toolCallId: getToolCallId(),
+        toolCallId: options.toolCallId ?? getToolCallId(),
         toolCallMeta: {
           toolName,
           toolsetKey,

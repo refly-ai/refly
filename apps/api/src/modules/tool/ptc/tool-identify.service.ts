@@ -32,6 +32,7 @@ export interface ToolIdentification {
   toolsetKey: string;
   connectedAccountId?: string;
   userId?: string;
+  isGlobal?: boolean;
 }
 
 @Injectable()
@@ -125,6 +126,7 @@ export class ToolIdentifyService {
           toolsetKey,
           connectedAccountId: connection.connectedAccountId,
           userId: user.uid,
+          isGlobal: toolset.isGlobal ?? false,
         };
       }
 
@@ -137,6 +139,7 @@ export class ToolIdentifyService {
           toolsetKey,
           connectedAccountId,
           userId: 'refly_global',
+          isGlobal: toolset.isGlobal ?? false,
         };
       }
 
@@ -149,6 +152,7 @@ export class ToolIdentifyService {
         return {
           type: 'legacy_sdk',
           toolsetKey,
+          isGlobal: toolset.isGlobal ?? false,
         };
       }
 
@@ -156,6 +160,7 @@ export class ToolIdentifyService {
       return {
         type: 'config_based',
         toolsetKey,
+        isGlobal: toolset.isGlobal ?? false,
       };
     }
 
