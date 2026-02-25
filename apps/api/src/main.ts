@@ -97,5 +97,10 @@ async function bootstrap() {
   }
 
   await app.listen(configService.get('port'));
+
+  // Tell PM2 we are ready (when wait_ready: true). Keeps status "launching" until this runs.
+  if (typeof process.send === 'function') {
+    process.send('ready');
+  }
 }
 bootstrap();
