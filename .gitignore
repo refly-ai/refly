@@ -57,6 +57,7 @@ docs/.vitepress/cache/*
 
 .codex/*
 .ai/*
+.agent-runtime/
 
 apps/api/load-tests/results/*.json
 apps/api/load-tests/results/*.txt
@@ -91,3 +92,4 @@ tools/agent-skills/refly-standards-dev-loop/
 
 # Local Prisma migration SQL experiments
 apps/api/prisma/migrations/
+.agent-runtime/ 
