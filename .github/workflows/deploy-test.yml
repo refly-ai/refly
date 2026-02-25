@@ -240,11 +240,11 @@ jobs:
               changes: [
                 {
                   application: "refly-api",
-                  valuesContent: {"image": {"tag": $apiTag}}
+                  valuesContent: ({image: {tag: $apiTag}} | tojson)
                 },
                 {
                   application: "refly-web",
-                  valuesContent: {"image": {"tag": $webTag}}
+                  valuesContent: ({image: {tag: $webTag}} | tojson)
                 }
               ]
             }')
