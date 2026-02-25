@@ -231,7 +231,7 @@ jobs:
 
           PAYLOAD=$(jq -n \
             --arg environment "test" \
-            --arg syncMode "createPR" \
+            --arg syncMode "directCommit" \
             --arg apiTag "$API_TAG" \
             --arg webTag "$WEB_TAG" \
             '{
