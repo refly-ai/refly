@@ -1,7 +1,7 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "tags": ["-lintignore"],
-  "ignoreDependencies": ["pino-pretty"],
+  "ignoreDependencies": ["pino-pretty", "pm2"],
   "ignore": [
     "postcss.config.*",
     "**/*.config.ts",
@@ -11,7 +11,8 @@
     "docs/.vitepress/**",
     "packages/cli/**",
     "packages/openapi-schema/openapi-ts.config.ts",
-    "deploy/docker/prepare-deploy.js"
+    "deploy/docker/prepare-deploy.js",
+    "ecosystem.config.js"
   ],
   "workspaces": {
     ".": {},
