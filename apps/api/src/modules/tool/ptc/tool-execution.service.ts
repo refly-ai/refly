@@ -595,6 +595,11 @@ export class ToolExecutionService {
       metadata: {
         toolName: parsedMethod.name,
         toolsetKey: config.inventoryKey,
+        // Include schemas for dynamic billing calculation in post-handler
+        requestSchema: parsedMethod.schema ? JSON.stringify(parsedMethod.schema) : undefined,
+        responseSchema: parsedMethod.responseSchema
+          ? JSON.stringify(parsedMethod.responseSchema)
+          : undefined,
       },
     };
 
