@@ -338,20 +338,52 @@ export class ToolExecutionService {
 
     // Process billing for Composio tools (if successful)
     const toolsetKey = toolInfo.toolsetKey ?? 'composio';
-    const creditCost = 3; // Default credit cost for Composio tools
 
-    if (result.successful && creditCost > 0) {
+    if (result.successful) {
       try {
-        await this.billingService.processBilling({
-          uid: user.uid,
-          toolName,
-          toolsetKey,
-          discountedPrice: creditCost,
-          originalPrice: creditCost,
-          resultId: ptcContext?.resultId,
-          version: ptcContext?.version,
-          toolCallId: toolCallId,
-        });
+        // Resolve credit cost from inventory (same logic as non-PTC Composio path)
+        const { creditCost, creditBillingMap } =
+          await this.resolveComposioBillingConfig(toolsetKey);
+
+        if (creditBillingMap && creditCost === 0) {
+          // Provider-based billing (per-action tier pricing)
+          const actionTier = creditBillingMap[toolName]?.tier ?? creditBillingMap._default?.tier;
+          const tier = actionTier === 'premium' ? 'premium' : 'standard';
+
+          const providerConfig = await this.billingService.getProviderBillingConfig('composio');
+          if (providerConfig) {
+            const fractionalCost = this.billingService.calculateComposioCreditCost(
+              providerConfig,
+              tier,
+            );
+            await this.billingService.processComposioBilling({
+              uid: user.uid,
+              toolName,
+              toolsetKey,
+              fractionalCreditCost: fractionalCost,
+              originalFractionalCost: fractionalCost,
+              resultId: ptcContext?.resultId,
+              version: ptcContext?.version,
+              toolCallId,
+            });
+          } else {
+            this.logger.error(
+              `Missing active composio provider billing config for ${toolsetKey}.${toolName}`,
+            );
+          }
+        } else if (creditCost > 0) {
+          // Fixed credit cost billing
+          await this.billingService.processBilling({
+            uid: user.uid,
+            toolName,
+            toolsetKey,
+            discountedPrice: creditCost,
+            originalPrice: creditCost,
+            resultId: ptcContext?.resultId,
+            version: ptcContext?.version,
+            toolCallId,
+          });
+        }
       } catch (billingError) {
         this.logger.error(
           `Billing failed for ${toolsetKey}.${toolName}: ${billingError instanceof Error ? billingError.message : String(billingError)}`,
@@ -374,6 +406,49 @@ export class ToolExecutionService {
       error: result.error ?? 'Tool execution failed',
       data: result.data,
     };
+  }
+
+  /**
+   * Resolve Composio billing configuration from inventory.
+   * Matches the billing resolution logic in composio.service.ts instantiateToolsets.
+   *
+   * @returns creditCost (0 = sentinel for provider-based billing) and optional creditBillingMap
+   */
+  private async resolveComposioBillingConfig(toolsetKey: string): Promise<{
+    creditCost: number;
+    creditBillingMap?: Record<string, { tier: 'standard' | 'premium' }>;
+  }> {
+    const inventory = await this.prisma.toolsetInventory.findUnique({
+      where: { key: toolsetKey },
+      select: { creditBilling: true },
+    });
+
+    if (!inventory?.creditBilling) {
+      return { creditCost: 3 }; // Default fallback
+    }
+
+    // Try parsing as creditBillingMap (JSON object with tier info)
+    try {
+      const parsed = JSON.parse(inventory.creditBilling) as unknown;
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        const map: Record<string, { tier: 'standard' | 'premium' }> = {};
+        for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+          const tier = (value as { tier?: string })?.tier;
+          if (tier === 'standard' || tier === 'premium') {
+            map[key] = { tier };
+          }
+        }
+        if (Object.keys(map).length > 0) {
+          return { creditCost: 0, creditBillingMap: map }; // 0 = sentinel for provider-based billing
+        }
+      }
+    } catch {
+      // Not JSON, try as numeric value
+    }
+
+    // Try as plain numeric cost
+    const numericCost = Number.parseFloat(inventory.creditBilling);
+    return { creditCost: Number.isFinite(numericCost) ? numericCost : 3 };
   }
 
   /**

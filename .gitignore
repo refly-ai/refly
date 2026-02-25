@@ -81,9 +81,13 @@ scripts/generate-db-schema-doc.js
 scripts/verify-standards.js
 scripts/agent-dev-server.sh
 scripts/cli-deploy/apply-test-migration-sql.sh
+scripts/git-hooks/codex-pre-push-review.sh
 
 # Local skills
 tools/agent-skills/refly-standards-dev-loop/
+
+# Local git hook overrides
+.husky/pre-push
 
 # Local Prisma migration SQL experiments
 apps/api/prisma/migrations/

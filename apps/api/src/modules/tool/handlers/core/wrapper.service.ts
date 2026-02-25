@@ -18,7 +18,7 @@ import { RegularToolPostHandlerService } from '../post/regular-post.service';
  *
  * Provides invoke method to execute a tool with post-processing applied to result.
  */
-export interface IToolWrapperFactory {
+interface IToolWrapperFactory {
   /**
    * Execute a tool and apply post-processing to the result.
    *

@@ -430,7 +430,7 @@ export class BillingService implements OnModuleInit {
         };
       }
 
-      const effectiveToolCallId = getToolCallId() ?? '';
+      const effectiveToolCallId = options.toolCallId ?? getToolCallId() ?? '';
       const idempotencyKey =
         [
           toolsetKey,
@@ -619,6 +619,17 @@ export class BillingService implements OnModuleInit {
       if (!this.shouldUseRedisNonAtomicFallback(error)) {
         throw error;
       }
+
+      // Refuse non-atomic fallback in production to prevent race conditions
+      const nodeEnv = process.env.NODE_ENV ?? '';
+      if (nodeEnv === 'production' || nodeEnv === 'staging') {
+        this.logger.error(
+          `Redis EVAL failed in ${nodeEnv} — refusing non-atomic fallback to prevent race conditions. ` +
+            `Error: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        throw error;
+      }
+
       // Desktop-mode fallback when redis EVAL is not available (e.g. mock/minimal Redis).
       // NOTE: This non-atomic path has a known race condition between the idempotency
       // check and the INCRBY equivalent. Acceptable for local single-user development

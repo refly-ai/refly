@@ -230,6 +230,7 @@ export class ComposioToolPostHandlerService implements IToolPostHandler {
             creditBillingMap: composioInput.creditBillingMap,
             resultId: context.resultId,
             resultVersion: context.resultVersion,
+            toolCallId,
           });
         } else if (creditCost > 0) {
           await this.processBilling({
@@ -812,8 +813,10 @@ export class ComposioToolPostHandlerService implements IToolPostHandler {
     creditBillingMap: Record<string, { tier: 'standard' | 'premium' }>;
     resultId: string;
     resultVersion: number;
+    toolCallId?: string;
   }): Promise<void> {
-    const { user, toolName, toolsetKey, creditBillingMap, resultId, resultVersion } = args;
+    const { user, toolName, toolsetKey, creditBillingMap, resultId, resultVersion, toolCallId } =
+      args;
     try {
       const actionTier = creditBillingMap[toolName]?.tier ?? creditBillingMap._default?.tier;
       const tier = actionTier === 'premium' ? 'premium' : 'standard';
@@ -835,6 +838,7 @@ export class ComposioToolPostHandlerService implements IToolPostHandler {
         originalFractionalCost: fractionalCost,
         resultId,
         version: resultVersion,
+        toolCallId,
       });
 
       this.logger.debug(

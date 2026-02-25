@@ -10,6 +10,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { HandlerContext, HandlerRequest, HandlerResponse } from '@refly/openapi-schema';
 import { BillingService } from '../../billing/billing.service';
+import { MissingCanvasContextError } from '../../errors/resource-errors';
+import { extractFileIdToTopLevel } from '../../utils';
 import { BasePostHandlerService, type PostHandlerConfig } from './base-post.service';
 
 /**
@@ -65,7 +67,8 @@ export class DynamicPostHandlerService extends BasePostHandlerService {
         );
       }
 
-      return processedResponse;
+      // Preserve legacy behavior for frontend consumers that rely on top-level file fields
+      return extractFileIdToTopLevel(processedResponse);
     } catch (error) {
       this.logger.error(
         `Post-processing failed for ${request.provider}.${request.method}: ${error.message}`,
@@ -147,6 +150,9 @@ export class DynamicPostHandlerService extends BasePostHandlerService {
 
       return uploadedResponse;
     } catch (error) {
+      if (error instanceof MissingCanvasContextError) {
+        throw error;
+      }
       this.logger.warn(
         `Resource upload failed for ${request.provider}.${request.method}: ${error.message}`,
       );
