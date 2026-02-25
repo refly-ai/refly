@@ -178,6 +178,8 @@ model ActionResult {
   actualProviderItemId    String?      @map("actual_provider_item_id")
   /// Whether this action used auto model routing
   isAutoModelRouted       Boolean      @default(false) @map("is_auto_model_routed")
+  /// Whether PTC (Programmatic Tool Calling) was enabled for this run
+  ptcEnabled              Boolean      @default(false) @map("ptc_enabled")
   /// Copilot session id
   copilotSessionId        String?      @map("copilot_session_id")
   /// Workflow execution id

@@ -1707,6 +1707,7 @@ export class SkillInvokerService {
             // If status is failed, use result.errorType (which should always be set now), fallback to 'systemError'
             errorType: status === 'failed' ? result.errorType || 'systemError' : null,
             errors: JSON.stringify(result.errors),
+            ptcEnabled: config.configurable.ptcEnabled ?? false,
           },
         }),
       ]);
