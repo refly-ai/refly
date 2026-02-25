@@ -17,7 +17,7 @@ import type {
   HandlerRequest,
   HandlerResponse,
 } from '@refly/openapi-schema';
-import { HandlerError } from '../../constant/constant';
+import { AdapterError, HandlerError } from '../../constant/constant';
 import type { IAdapter } from '../../dynamic-tooling/adapters/adapter';
 import type { ResourceHandler } from '../../utils';
 import { DynamicPostHandlerService } from '../post/dynamic-post.service';
@@ -102,7 +102,7 @@ export class HandlerService {
         );
         return this.createErrorResponse(
           (error as HandlerError).code || 'EXECUTION_ERROR',
-          (error as Error).message,
+          this.formatExecutionErrorMessage(error as Error),
         );
       }
 
@@ -219,5 +219,45 @@ export class HandlerService {
       success: true,
       data: { result: data },
     };
+  }
+
+  /**
+   * Format execution errors for agent-visible output.
+   * Includes upstream provider response body when available.
+   */
+  private formatExecutionErrorMessage(error: Error): string {
+    const baseMessage = error.message;
+
+    if (!(error instanceof AdapterError)) {
+      return baseMessage;
+    }
+
+    const responseData = error.details?.responseData;
+    if (responseData == null) {
+      return baseMessage;
+    }
+
+    const details = this.stringifyErrorDetails(responseData);
+    if (!details) {
+      return baseMessage;
+    }
+
+    return `${baseMessage}. Upstream response: ${details}`;
+  }
+
+  private stringifyErrorDetails(value: unknown): string | null {
+    try {
+      const text =
+        typeof value === 'string'
+          ? value
+          : typeof value === 'object'
+            ? JSON.stringify(value)
+            : String(value);
+
+      if (!text) return null;
+      return text.length > 1500 ? `${text.slice(0, 1500)}...[truncated]` : text;
+    } catch {
+      return null;
+    }
   }
 }

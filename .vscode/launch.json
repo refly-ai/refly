@@ -12,7 +12,7 @@
       "runtimeArgs": ["-F", "api", "dev:debug"],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
-      "autoAttachChildProcesses": true,
+      "autoAttachChildProcesses": false,
       "skipFiles": ["<node_internals>/**"],
       "sourceMaps": true,
       "resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**"],
@@ -37,7 +37,7 @@
       "request": "launch",
       "name": "Debug Backend",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "api", "dev"],
+      "runtimeArgs": ["--filter", "api", "dev:debug"],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "env": {
@@ -46,7 +46,7 @@
         "DEBUG_DIR": "${workspaceFolder}/debug-logs",
         "DEBUG_CONSOLE": "true"
       },
-      "autoAttachChildProcesses": true,
+      "autoAttachChildProcesses": false,
       "skipFiles": ["<node_internals>/**"],
       "sourceMaps": true,
       "resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**"],

@@ -79,6 +79,11 @@ scripts/lint-architecture.js
 scripts/doc-gardening.js
 scripts/generate-db-schema-doc.js
 scripts/verify-standards.js
+scripts/agent-dev-server.sh
+scripts/cli-deploy/apply-test-migration-sql.sh
+
+# Local skills
+tools/agent-skills/refly-standards-dev-loop/
 
 # Local Prisma migration SQL experiments
 apps/api/prisma/migrations/

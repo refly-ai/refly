@@ -209,7 +209,14 @@ export class HttpClient {
   private transformError(error: unknown): AdapterError {
     if (axios.isAxiosError(error)) {
       const statusCode = error.response?.status;
-      const message = error.response?.data?.message || error.message;
+      const responseBody = this.formatErrorResponseBody(error.response?.data);
+      const message =
+        (typeof responseBody === 'object' &&
+          responseBody &&
+          'message' in responseBody &&
+          typeof (responseBody as Record<string, unknown>).message === 'string' &&
+          ((responseBody as Record<string, unknown>).message as string)) ||
+        error.message;
 
       // Determine error code based on status
       let code = 'HTTP_ERROR';
@@ -232,12 +239,39 @@ export class HttpClient {
       }
 
       return new AdapterError(message, code, statusCode, {
-        responseData: error.response?.data,
+        responseData: responseBody,
         headers: error.response?.headers,
       });
     }
 
     // Unknown error
     return new AdapterError((error as Error).message || 'Unknown error', 'UNKNOWN_ERROR');
+  }
+
+  private formatErrorResponseBody(data: unknown): unknown {
+    if (data == null) return data;
+
+    // axios + responseType=arraybuffer usually returns Buffer in Node.js
+    if (Buffer.isBuffer(data)) {
+      const text = data.toString('utf-8');
+      return this.tryParseJson(text);
+    }
+
+    if (data instanceof ArrayBuffer) {
+      const text = Buffer.from(data).toString('utf-8');
+      return this.tryParseJson(text);
+    }
+
+    return data;
+  }
+
+  private tryParseJson(text: string): unknown {
+    const trimmed = text.trim();
+    if (!trimmed) return '';
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      return trimmed.length > 8000 ? `${trimmed.slice(0, 8000)}...[truncated]` : trimmed;
+    }
   }
 }
