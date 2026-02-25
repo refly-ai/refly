@@ -57,6 +57,7 @@ docs/.vitepress/cache/*
 
 .codex/*
 .ai/*
+.agent-runtime/
 
 apps/api/load-tests/results/*.json
 apps/api/load-tests/results/*.txt
@@ -65,3 +66,30 @@ apps/api/load-tests/results/*.txt
 # Helm dependency artifacts (Chart.lock handled separately)
 deploy/helm/**/charts/*.tgz
 deploy/helm/**/charts/**/*.tgz
+
+# Local agent guidance / standards experiments
+.worktrees/
+AGENTS.md
+ARCHITECTURE.md
+CLAUDE.md
+docs/standards/
+
+# Local validation / docs tooling scripts
+scripts/validate-docs.js
+scripts/lint-architecture.js
+scripts/doc-gardening.js
+scripts/generate-db-schema-doc.js
+scripts/verify-standards.js
+scripts/agent-dev-server.sh
+scripts/cli-deploy/apply-test-migration-sql.sh
+scripts/git-hooks/codex-pre-push-review.sh
+
+# Local skills
+tools/agent-skills/refly-standards-dev-loop/
+
+# Local git hook overrides
+.husky/pre-push
+
+# Local Prisma migration SQL experiments
+apps/api/prisma/migrations/
+.agent-runtime/ 

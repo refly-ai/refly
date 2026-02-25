@@ -42,11 +42,38 @@ export const migrateDbSchema = (): void => {
   }
 
   const prismaSchemaPath = join(prismaRoot, 'schema.prisma');
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    throw new Error('DATABASE_URL is required for auto migration');
+  }
 
-  execSync(
-    `${prismaBin} migrate diff --from-url ${process.env.DATABASE_URL} --to-schema-datamodel ${prismaSchemaPath} --script | ${prismaBin} db execute --stdin`,
-    { stdio: 'inherit' },
+  console.log('[MigrateDB] Running prisma migrate diff...');
+  const diffSql = execSync(
+    `${prismaBin} migrate diff --from-url "${databaseUrl}" --to-schema-datamodel "${prismaSchemaPath}" --script`,
+    { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'inherit'], timeout: 30_000 },
   );
+
+  if (!diffSql.trim()) {
+    console.log('[MigrateDB] Schema is up to date, no migration needed');
+    return;
+  }
+
+  // Make auto-migration idempotent for startup scenarios:
+  // prisma migrate diff may emit CREATE INDEX/TABLE statements that already exist in DB.
+  const sanitizedSql = diffSql
+    .replace(/CREATE TABLE\s+/gi, 'CREATE TABLE IF NOT EXISTS ')
+    .replace(
+      /CREATE\s+(UNIQUE\s+)?INDEX\s+("[^"]+"|[^\s]+)\s+ON/gi,
+      'CREATE $1INDEX IF NOT EXISTS $2 ON',
+    );
+
+  console.log('[MigrateDB] Applying migration...');
+  execSync(`${prismaBin} db execute --stdin --url "${databaseUrl}"`, {
+    input: sanitizedSql,
+    stdio: ['pipe', 'inherit', 'inherit'],
+    timeout: 30_000,
+  });
+  console.log('[MigrateDB] Migration complete');
 };
 
 /**

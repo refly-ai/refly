@@ -1,27 +1,21 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { ComposioController } from './composio.controller';
-import { ComposioService } from './composio.service';
 import { CommonModule } from '../../common/common.module';
 import { DriveModule } from '../../drive/drive.module';
 import { MiscModule } from '../../misc/misc.module';
 import { BillingModule } from '../billing/billing.module';
-import { ResourceHandler } from '../resource.service';
+import { HandlersModule } from '../handlers/handlers.module';
 import { ToolInventoryService } from '../inventory/inventory.service';
-import { ComposioToolPostHandlerService } from '../tool-execution/post-execution/composio-post.service';
-import { ComposioToolPreHandlerService } from '../tool-execution/pre-execution/composio/composio-pre.service';
-import { PreHandlerRegistryService } from '../tool-execution/pre-execution/composio/pre-registry.service';
+import { ComposioController } from './composio.controller';
+import { ComposioService } from './composio.service';
 
 @Module({
-  imports: [ConfigModule, CommonModule, DriveModule, MiscModule, BillingModule],
+  imports: [ConfigModule, CommonModule, DriveModule, MiscModule, BillingModule, HandlersModule],
   controllers: [ComposioController],
   providers: [
     ComposioService,
-    ComposioToolPostHandlerService,
-    ComposioToolPreHandlerService,
-    PreHandlerRegistryService,
-    ResourceHandler,
     ToolInventoryService,
+    // ResourceHandler now provided by HandlersModule
   ],
   exports: [ComposioService],
 })

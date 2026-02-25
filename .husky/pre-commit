@@ -1,1 +1,2 @@
 lint-staged --no-stash
+pnpm knip

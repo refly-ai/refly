@@ -1,6 +1,6 @@
 /**
  * Billing Module
- * Provides unified billing service for tool execution
+ * Provides unified billing service for tool execution with dynamic configuration
  */
 
 import { Module } from '@nestjs/common';

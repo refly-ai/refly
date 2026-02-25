@@ -1,5 +1,5 @@
 import type { HandlerRequest, JsonSchema } from '@refly/openapi-schema';
-import type { RequestContext } from '../../../tool-context';
+import type { RequestContext } from '../../tool-context';
 
 /**
  * Context for pre-handler processing

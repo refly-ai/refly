@@ -9,8 +9,8 @@ import * as crypto from 'node:crypto';
 import { Logger } from '@nestjs/common';
 import type { AxiosResponse } from 'axios';
 import type { AdapterResponse, PollingConfig } from '@refly/openapi-schema';
-import { AdapterError } from '../../constant/constant';
-import { HttpClient } from './http-client';
+import { AdapterError } from '../../../constant/constant';
+import { HttpClient } from '../http-client';
 
 /**
  * Configuration for Volcengine API signing
