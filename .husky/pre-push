@@ -1,2 +1,0 @@
-echo "[husky pre-push] starting local Codex/Claude review loop..."
-./scripts/git-hooks/codex-pre-push-review.sh

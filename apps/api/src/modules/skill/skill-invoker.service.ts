@@ -1124,8 +1124,8 @@ export class SkillInvokerService {
                   });
                 }
 
-                // Start PTC polling for execute_code tool
-                if (toolName === 'execute_code' && res) {
+                // Start PTC polling for execute_code tool (runs even without SSE connection for DB persistence)
+                if (toolName === 'execute_code') {
                   ptcPollerManager.start(toolCallId);
                 }
 
@@ -1201,8 +1201,8 @@ export class SkillInvokerService {
               }
               this.metrics.tool.fail({ toolName, toolsetKey, error: errorMsg });
 
-              // Stop PTC polling for execute_code tool on error
-              if (toolName === 'execute_code' && res) {
+              // Stop PTC polling for execute_code tool on error (runs even without SSE connection)
+              if (toolName === 'execute_code') {
                 await ptcPollerManager.stop(toolCallId);
               }
 
