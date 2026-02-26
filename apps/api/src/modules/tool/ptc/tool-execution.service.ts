@@ -26,11 +26,11 @@ import { ToolCallService, ToolCallStatus } from '../../tool-call/tool-call.servi
 import { PrismaService } from '../../common/prisma.service';
 import { EncryptionService } from '../../common/encryption.service';
 import { ToolInventoryService } from '../inventory/inventory.service';
-import { AdapterFactory } from '../dynamic-tooling/adapters/factory';
-import { HttpHandler } from '../dynamic-tooling/core/handler';
+import { AdapterFactory } from '../dynamic-tooling/adapters/adapter-factory.service';
 import { BillingService } from '../billing/billing.service';
 import { ResourceHandler, parseJsonSchema, resolveCredentials, fillDefaultValues } from '../utils';
 import { runInContext } from '../tool-context';
+import { HandlerService, type HttpHandlerOptions } from '../handlers/core/handler.service';
 
 /**
  * PTC (Programmatic Tool Call) context for /v1/tool/execute API
@@ -63,6 +63,7 @@ export class ToolExecutionService {
     private readonly toolCallService: ToolCallService,
     private readonly inventoryService: ToolInventoryService,
     private readonly adapterFactory: AdapterFactory,
+    private readonly handlerService: HandlerService,
     private readonly resourceHandler: ResourceHandler,
     private readonly billingService: BillingService,
     private readonly encryptionService: EncryptionService,
@@ -337,20 +338,52 @@ export class ToolExecutionService {
 
     // Process billing for Composio tools (if successful)
     const toolsetKey = toolInfo.toolsetKey ?? 'composio';
-    const creditCost = 3; // Default credit cost for Composio tools
 
-    if (result.successful && creditCost > 0) {
+    if (result.successful) {
       try {
-        await this.billingService.processBilling({
-          uid: user.uid,
-          toolName,
-          toolsetKey,
-          discountedPrice: creditCost,
-          originalPrice: creditCost,
-          resultId: ptcContext?.resultId,
-          version: ptcContext?.version,
-          toolCallId: toolCallId,
-        });
+        // Resolve credit cost from inventory (same logic as non-PTC Composio path)
+        const { creditCost, creditBillingMap } =
+          await this.resolveComposioBillingConfig(toolsetKey);
+
+        if (creditBillingMap && creditCost === 0) {
+          // Provider-based billing (per-action tier pricing)
+          const actionTier = creditBillingMap[toolName]?.tier ?? creditBillingMap._default?.tier;
+          const tier = actionTier === 'premium' ? 'premium' : 'standard';
+
+          const providerConfig = await this.billingService.getProviderBillingConfig('composio');
+          if (providerConfig) {
+            const fractionalCost = this.billingService.calculateComposioCreditCost(
+              providerConfig,
+              tier,
+            );
+            await this.billingService.processComposioBilling({
+              uid: user.uid,
+              toolName,
+              toolsetKey,
+              fractionalCreditCost: fractionalCost,
+              originalFractionalCost: fractionalCost,
+              resultId: ptcContext?.resultId,
+              version: ptcContext?.version,
+              toolCallId,
+            });
+          } else {
+            this.logger.error(
+              `Missing active composio provider billing config for ${toolsetKey}.${toolName}`,
+            );
+          }
+        } else if (creditCost > 0) {
+          // Fixed credit cost billing
+          await this.billingService.processBilling({
+            uid: user.uid,
+            toolName,
+            toolsetKey,
+            discountedPrice: creditCost,
+            originalPrice: creditCost,
+            resultId: ptcContext?.resultId,
+            version: ptcContext?.version,
+            toolCallId,
+          });
+        }
       } catch (billingError) {
         this.logger.error(
           `Billing failed for ${toolsetKey}.${toolName}: ${billingError instanceof Error ? billingError.message : String(billingError)}`,
@@ -373,6 +406,49 @@ export class ToolExecutionService {
       error: result.error ?? 'Tool execution failed',
       data: result.data,
     };
+  }
+
+  /**
+   * Resolve Composio billing configuration from inventory.
+   * Matches the billing resolution logic in composio.service.ts instantiateToolsets.
+   *
+   * @returns creditCost (0 = sentinel for provider-based billing) and optional creditBillingMap
+   */
+  private async resolveComposioBillingConfig(toolsetKey: string): Promise<{
+    creditCost: number;
+    creditBillingMap?: Record<string, { tier: 'standard' | 'premium' }>;
+  }> {
+    const inventory = await this.prisma.toolsetInventory.findUnique({
+      where: { key: toolsetKey },
+      select: { creditBilling: true },
+    });
+
+    if (!inventory?.creditBilling) {
+      return { creditCost: 3 }; // Default fallback
+    }
+
+    // Try parsing as creditBillingMap (JSON object with tier info)
+    try {
+      const parsed = JSON.parse(inventory.creditBilling) as unknown;
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        const map: Record<string, { tier: 'standard' | 'premium' }> = {};
+        for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+          const tier = (value as { tier?: string })?.tier;
+          if (tier === 'standard' || tier === 'premium') {
+            map[key] = { tier };
+          }
+        }
+        if (Object.keys(map).length > 0) {
+          return { creditCost: 0, creditBillingMap: map }; // 0 = sentinel for provider-based billing
+        }
+      }
+    } catch {
+      // Not JSON, try as numeric value
+    }
+
+    // Try as plain numeric cost
+    const numericCost = Number.parseFloat(inventory.creditBilling);
+    return { creditCost: Number.isFinite(numericCost) ? numericCost : 3 };
   }
 
   /**
@@ -411,7 +487,7 @@ export class ToolExecutionService {
     const credentials = resolveCredentials(config.credentials || {});
 
     // Step 4: Create HTTP handler
-    const handler = await this.createHttpHandler(config, parsedMethod, credentials);
+    const { adapter, options } = await this.createHttpHandler(config, parsedMethod, credentials);
 
     // Step 5: Prepare request with defaults and resource preprocessing
     const request = await this.prepareToolRequest(config, parsedMethod, args, user);
@@ -444,7 +520,7 @@ export class ToolExecutionService {
         requestId: `ptc-${toolsetKeyValue}-${toolNameValue}-${Date.now()}`,
         metadata: { toolName: toolNameValue, toolsetKey: toolsetKeyValue, toolCallId },
       },
-      async () => handler.handle(request),
+      async () => this.handlerService.execute(request, adapter, options),
     );
 
     // Step 7: Convert HandlerResponse to execution result format
@@ -472,22 +548,27 @@ export class ToolExecutionService {
     _config: ToolsetConfig,
     parsedMethod: ParsedMethodConfig,
     credentials: Record<string, unknown>,
-  ): Promise<HttpHandler> {
+  ): Promise<{
+    adapter: Awaited<ReturnType<AdapterFactory['createAdapter']>>;
+    options: HttpHandlerOptions;
+  }> {
     const adapter = await this.adapterFactory.createAdapter(parsedMethod, credentials);
 
-    return new HttpHandler(adapter, {
-      endpoint: parsedMethod.endpoint,
-      method: parsedMethod.method,
-      credentials,
-      responseSchema: parsedMethod.responseSchema,
-      billing: parsedMethod.billing,
-      billingService: this.billingService,
-      timeout: parsedMethod.timeout,
-      useFormData: parsedMethod.useFormData,
-      formatResponse: false, // Return JSON, not formatted text
-      enableResourceUpload: true, // Enable ResourceHandler for output processing
-      resourceHandler: this.resourceHandler,
-    });
+    return {
+      adapter,
+      options: {
+        endpoint: parsedMethod.endpoint,
+        method: parsedMethod.method,
+        credentials,
+        responseSchema: parsedMethod.responseSchema,
+        billing: parsedMethod.billing,
+        timeout: parsedMethod.timeout,
+        useFormData: parsedMethod.useFormData,
+        formatResponse: false, // Return JSON, not formatted text
+        enableResourceUpload: true, // Enable ResourceHandler for output processing
+        resourceHandler: this.resourceHandler,
+      },
+    };
   }
 
   /**
@@ -514,6 +595,11 @@ export class ToolExecutionService {
       metadata: {
         toolName: parsedMethod.name,
         toolsetKey: config.inventoryKey,
+        // Include schemas for dynamic billing calculation in post-handler
+        requestSchema: parsedMethod.schema ? JSON.stringify(parsedMethod.schema) : undefined,
+        responseSchema: parsedMethod.responseSchema
+          ? JSON.stringify(parsedMethod.responseSchema)
+          : undefined,
       },
     };
 

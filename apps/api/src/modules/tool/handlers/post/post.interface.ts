@@ -47,6 +47,8 @@ export interface ComposioPostHandlerInput extends PostHandlerInput {
   toolsetName?: string;
   /** Credit cost for billing */
   creditCost?: number;
+  /** Per-action tier config for provider billing */
+  creditBillingMap?: Record<string, { tier: 'standard' | 'premium' }>;
   /** File name title for uploads */
   fileNameTitle?: string;
   /** Tool call ID for billing tracking */

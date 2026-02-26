@@ -2,3 +2,6 @@
 export * from './schemas.gen';
 export * from './services.gen';
 export * from './types.gen';
+
+// Manual exports (re-add after codegen if overwritten)
+export * from './billing-rules';

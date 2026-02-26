@@ -13,8 +13,7 @@ import axios from 'axios';
 import HTMLtoDOCX from 'html-to-docx';
 import * as XLSX from 'xlsx';
 import { BillingService } from '../../billing/billing.service';
-import { extractFileIdToTopLevel } from '../../dynamic-tooling/core/handler-post';
-import { ResourceHandler } from '../../resource.service';
+import { ResourceHandler, extractFileIdToTopLevel } from '../../utils';
 import {
   DEFAULT_MAX_TOKENS,
   MAX_SNIPPET_TOKENS,
@@ -222,16 +221,28 @@ export class ComposioToolPostHandlerService implements IToolPostHandler {
       const isSuccessful = this.isResultSuccessful(normalized);
 
       // Only bill on successful tool executions
-      if (creditCost && creditCost > 0 && isSuccessful) {
-        await this.processBilling({
-          user: context.user,
-          toolName,
-          toolsetKey,
-          creditCost,
-          resultId: context.resultId,
-          resultVersion: context.resultVersion,
-          toolCallId,
-        });
+      if (isSuccessful) {
+        if (composioInput.creditBillingMap && creditCost === 0) {
+          await this.processProviderBilling({
+            user: context.user,
+            toolName,
+            toolsetKey,
+            creditBillingMap: composioInput.creditBillingMap,
+            resultId: context.resultId,
+            resultVersion: context.resultVersion,
+            toolCallId,
+          });
+        } else if (creditCost > 0) {
+          await this.processBilling({
+            user: context.user,
+            toolName,
+            toolsetKey,
+            creditCost,
+            resultId: context.resultId,
+            resultVersion: context.resultVersion,
+            toolCallId,
+          });
+        }
       }
 
       // Route to different processing based on tool type
@@ -792,6 +803,53 @@ export class ComposioToolPostHandlerService implements IToolPostHandler {
         creditCost,
       });
       // Don't throw - billing failure should not fail the tool execution
+    }
+  }
+
+  private async processProviderBilling(args: {
+    user: { uid: string };
+    toolName: string;
+    toolsetKey: string;
+    creditBillingMap: Record<string, { tier: 'standard' | 'premium' }>;
+    resultId: string;
+    resultVersion: number;
+    toolCallId?: string;
+  }): Promise<void> {
+    const { user, toolName, toolsetKey, creditBillingMap, resultId, resultVersion, toolCallId } =
+      args;
+    try {
+      const actionTier = creditBillingMap[toolName]?.tier ?? creditBillingMap._default?.tier;
+      const tier = actionTier === 'premium' ? 'premium' : 'standard';
+
+      const providerConfig = await this.billingService.getProviderBillingConfig('composio');
+      if (!providerConfig) {
+        this.logger.error(
+          `Missing active composio provider billing config, fail-closed for ${toolsetKey}.${toolName}`,
+        );
+        return;
+      }
+
+      const fractionalCost = this.billingService.calculateComposioCreditCost(providerConfig, tier);
+      const result = await this.billingService.processComposioBilling({
+        uid: user.uid,
+        toolName,
+        toolsetKey,
+        fractionalCreditCost: fractionalCost,
+        originalFractionalCost: fractionalCost,
+        resultId,
+        version: resultVersion,
+        toolCallId,
+      });
+
+      this.logger.debug(
+        `Provider billing processed for ${toolsetKey}.${toolName}: tier=${tier}, fractionalCost=${fractionalCost}, flushed=${result.flushedCredits ?? 0}`,
+      );
+    } catch (error) {
+      this.logger.error('Failed to process provider billing', {
+        error: (error as Error)?.message,
+        toolName,
+        toolsetKey,
+      });
     }
   }
 }

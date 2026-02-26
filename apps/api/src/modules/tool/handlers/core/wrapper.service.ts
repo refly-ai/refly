@@ -5,18 +5,34 @@
  * Provides invoke() method for tool execution with automatic result processing.
  */
 
-import { Injectable, Logger } from '@nestjs/common';
-import type { StructuredToolInterface } from '@langchain/core/tools';
 import type { RunnableConfig } from '@langchain/core/runnables';
+import type { StructuredToolInterface } from '@langchain/core/tools';
+import { Injectable, Logger } from '@nestjs/common';
 import { ZodError } from 'zod';
-import type {
-  ToolType,
-  IToolPostHandler,
-  PostHandlerContext,
-} from '../post-execution/post.interface';
-import type { IToolWrapperFactory } from './wrapper.interface';
-import { ComposioToolPostHandlerService } from '../post-execution/composio-post.service';
-import { RegularToolPostHandlerService } from '../post-execution/regular-post.service';
+import { ComposioToolPostHandlerService } from '../post/composio-post.service';
+import type { IToolPostHandler, PostHandlerContext, ToolType } from '../post/post.interface';
+import { RegularToolPostHandlerService } from '../post/regular-post.service';
+
+/**
+ * Tool Wrapper Factory Interface
+ *
+ * Provides invoke method to execute a tool with post-processing applied to result.
+ */
+interface IToolWrapperFactory {
+  /**
+   * Execute a tool and apply post-processing to the result.
+   *
+   * @param tool - The tool to execute
+   * @param input - Input to pass to the tool
+   * @param config - Optional runnable config
+   * @returns Processed result with content and status
+   */
+  invoke(
+    tool: StructuredToolInterface,
+    input: unknown,
+    config?: RunnableConfig,
+  ): Promise<{ content: string; status: 'success' | 'error'; creditCost: number }>;
+}
 
 /**
  * Tool Wrapper Factory Service

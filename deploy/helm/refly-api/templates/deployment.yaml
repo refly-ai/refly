@@ -2,6 +2,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "refly-api.fullname" . }}
+  annotations:
+    reloader.stakater.com/auto: "true"
   labels:
     {{- include "refly-api.labels" . | nindent 4 }}
 spec:

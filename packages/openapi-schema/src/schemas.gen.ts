@@ -9051,6 +9051,20 @@ export const ToolCreationContextSchema = {
       type: 'number',
       description: 'Credit cost for tool execution',
     },
+    creditBillingMap: {
+      type: 'object',
+      description: 'Per-action tier config for provider billing',
+      additionalProperties: {
+        type: 'object',
+        properties: {
+          tier: {
+            type: 'string',
+            enum: ['standard', 'premium'],
+          },
+        },
+        required: ['tier'],
+      },
+    },
     toolsetType: {
       $ref: '#/components/schemas/GenericToolsetType',
       description: 'Toolset type identifier',
