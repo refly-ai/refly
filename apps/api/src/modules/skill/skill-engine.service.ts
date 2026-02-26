@@ -141,6 +141,15 @@ export class SkillEngineService implements OnModuleInit {
         await this.canvasService.deleteCanvas(user, param);
         return buildSuccessResponse({});
       },
+      getCanvasData: async (user, params) => {
+        const rawData = await this.canvasService.getCanvasRawData(user, params.canvasId);
+        return {
+          title: rawData.title ?? '',
+          nodes: rawData.nodes ?? [],
+          edges: rawData.edges ?? [],
+          variables: rawData.variables,
+        };
+      },
       getDocumentDetail: async (user, param) => {
         const document = await this.documentService.getDocumentDetail(user, param);
         return buildSuccessResponse(documentPO2DTO(document));

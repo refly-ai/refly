@@ -23,6 +23,7 @@ import {
 } from '@refly-packages/ai-workspace-common/queries';
 import cn from 'classnames';
 import { CopilotSummaryRenderer } from './internal-tool-renderers/copilot-summary-renderer';
+import { CopilotSnapshotRenderer } from './internal-tool-renderers/copilot-snapshot-renderer';
 
 const { Paragraph } = Typography;
 
@@ -353,6 +354,17 @@ const ToolCall: React.FC<ToolCallProps> = (props) => {
     if (toolName === 'get_workflow_summary') {
       return (
         <CopilotSummaryRenderer
+          toolsetKey="copilot"
+          toolCallStatus={toolCallStatus}
+          durationText={durationText}
+          parametersContent={parametersContent}
+        />
+      );
+    }
+
+    if (toolName === 'get_canvas_snapshot') {
+      return (
+        <CopilotSnapshotRenderer
           toolsetKey="copilot"
           toolCallStatus={toolCallStatus}
           durationText={durationText}

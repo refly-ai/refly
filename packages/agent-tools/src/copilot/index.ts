@@ -8,7 +8,12 @@ import {
   parseWorkflowPlanPatch,
 } from '@refly/canvas-common';
 import { ReflyService } from '../builtin/interface';
-import { User, WorkflowPlanRecord, WorkflowPatchOperation } from '@refly/openapi-schema';
+import {
+  User,
+  WorkflowPlanRecord,
+  WorkflowPatchOperation,
+  CanvasNode,
+} from '@refly/openapi-schema';
 import { RunnableConfig } from '@langchain/core/runnables';
 import { truncateContent } from '@refly/utils/token';
 
@@ -293,6 +298,106 @@ Use this tool when you need to:
         status: 'error',
         data: { error: (e as Error)?.message ?? String(e) },
         summary: 'Failed to retrieve workflow plan summary',
+      };
+    }
+  }
+}
+
+// Schema for get_canvas_snapshot tool (no input needed, uses canvas context)
+const getCanvasSnapshotSchema = z.object({});
+
+const MAX_SNAPSHOT_NODES = 50;
+const MAX_SNAPSHOT_EDGES = 100;
+const MAX_PREVIEW_LENGTH = 80;
+
+export class GetCanvasSnapshot extends AgentBaseTool<CopilotToolParams> {
+  name = 'get_canvas_snapshot';
+  toolsetKey = 'copilot';
+
+  schema = getCanvasSnapshotSchema;
+
+  description = `Retrieve the current canvas state including all nodes and edges.
+
+Use this tool when you need to:
+- See what nodes and edges are currently on the canvas
+- Understand the canvas layout before generating or modifying workflows
+- Answer user questions about the current canvas content`;
+
+  protected params: CopilotToolParams;
+
+  constructor(params: CopilotToolParams) {
+    super(params);
+    this.params = params;
+  }
+
+  async _call(
+    _input: z.infer<typeof this.schema>,
+    _: unknown,
+    config: RunnableConfig,
+  ): Promise<ToolCallResult> {
+    try {
+      const { reflyService, user } = this.params;
+      const canvasId = config.configurable?.canvasId;
+
+      if (!canvasId) {
+        return {
+          status: 'error',
+          data: { error: 'canvasId is required to retrieve canvas snapshot' },
+          summary: 'Missing canvas context',
+        };
+      }
+
+      const canvasData = await reflyService.getCanvasData(user, { canvasId });
+      const allNodes: CanvasNode[] = canvasData.nodes ?? [];
+      const allEdges = canvasData.edges ?? [];
+
+      // Build node type counts
+      const nodeTypeCounts: Record<string, number> = {};
+      for (const node of allNodes) {
+        const t = node.type ?? 'unknown';
+        nodeTypeCounts[t] = (nodeTypeCounts[t] ?? 0) + 1;
+      }
+
+      // Summarize nodes: strip position/style/metadata noise
+      const truncated = allNodes.length > MAX_SNAPSHOT_NODES;
+      const nodesToReturn = allNodes.slice(0, MAX_SNAPSHOT_NODES).map((node) => ({
+        id: node.id,
+        type: node.type,
+        title: node.data?.title,
+        entityId: node.data?.entityId,
+        contentPreview: node.data?.contentPreview
+          ? truncateContent(node.data.contentPreview, MAX_PREVIEW_LENGTH)
+          : undefined,
+      }));
+
+      // Summarize edges
+      const edgesTruncated = allEdges.length > MAX_SNAPSHOT_EDGES;
+      const edgesToReturn = allEdges.slice(0, MAX_SNAPSHOT_EDGES).map((edge) => ({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+      }));
+
+      return {
+        status: 'success',
+        data: {
+          title: canvasData.title,
+          nodeCount: allNodes.length,
+          edgeCount: allEdges.length,
+          nodeTypeCounts,
+          nodes: nodesToReturn,
+          edges: edgesToReturn,
+          variables: canvasData.variables,
+          truncated,
+          edgesTruncated,
+        },
+        summary: `Canvas "${canvasData.title}" has ${allNodes.length} node(s) and ${allEdges.length} edge(s).`,
+      };
+    } catch (e) {
+      return {
+        status: 'error',
+        data: { error: (e as Error)?.message ?? String(e) },
+        summary: 'Failed to retrieve canvas snapshot',
       };
     }
   }
