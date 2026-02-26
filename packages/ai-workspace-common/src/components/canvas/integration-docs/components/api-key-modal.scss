@@ -1,22 +1,28 @@
 // API Key Management Modal - Only keep Ant Design overrides and complex styles
 .api-key-management-modal,
 .api-key-create-modal,
-.api-key-delete-modal,
-.api-output-modal {
+.api-key-delete-modal {
   .ant-modal-content {
     border-radius: 20px;
     border: none;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
     overflow: hidden;
+    padding: 0;
   }
 
   .ant-modal-header {
-    height: 34px;
+    margin: 0;
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--refly-line);
+    margin-bottom: 0;
+
+    .ant-modal-title {
+      margin-bottom: 0;
+    }
   }
 
   .ant-modal-body {
-    border-top: 1px solid var(--refly-line);
-    padding: 16px 0px;
+    padding: 0;
   }
 
   // Override primary button styles
@@ -75,7 +81,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px;
+  padding: 8px 16px;
   position: relative;
 
   &.has-border::after {
@@ -145,20 +151,30 @@
 .api-key-delete-cancel-btn,
 .api-key-delete-confirm-btn {
   height: 32px;
-  border-radius: 8px;
+  border-radius: 100px;
   font-size: 14px;
   font-weight: 500;
   padding: 0 20px;
 }
 
-.api-key-delete-cancel-btn {
-  background: var(--refly-bg-content-z1);
-  border: 1px solid var(--refly-line);
-  color: var(--refly-text-0);
+
+
+.api-key-delete-confirm-btn {
+  background: var(--refly-func-danger-default) !important;
+  border-color: var(--refly-func-danger-default) !important;
+  color: #fff !important;
 
   &:hover {
-    background: var(--refly-bg-content-z0);
-    border-color: var(--refly-text-0);
+    background: var(--refly-func-danger-hover) !important;
+    border-color: var(--refly-func-danger-hover) !important;
+    color: #fff !important;
+    opacity: 1;
+  }
+
+  &:active {
+    background: var(--refly-func-danger-active) !important;
+    border-color: var(--refly-func-danger-active) !important;
+    color: #fff !important;
   }
 }
 
@@ -171,3 +187,33 @@
     border-color: var(--refly-func-error-hover);
   }
 }
+
+.api-key-create-confirm-btn-black {
+  background: var(--refly-text-0) !important;
+  border-color: var(--refly-text-0) !important;
+  color: var(--refly-bg-content-z2) !important;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+
+  &:hover {
+    background: var(--refly-text-1) !important;
+    border-color: var(--refly-text-1) !important;
+    color: var(--refly-bg-content-z2) !important;
+  }
+
+  &:active {
+    background: var(--refly-text-0) !important;
+    border-color: var(--refly-text-0) !important;
+    color: var(--refly-bg-content-z2) !important;
+  }
+
+  &:disabled {
+    background: var(--refly-text-3) !important;
+    border-color: var(--refly-text-3) !important;
+    color: var(--refly-bg-content-z2) !important;
+    opacity: 0.5;
+  }
+}
+

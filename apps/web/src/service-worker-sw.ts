@@ -234,9 +234,54 @@ registerRoute(
                   clientId,
                 );
 
-                // Immediately cache the new HTML to ensure reload gets fresh version
+                // 1. Clear all old HTML caches (except SSR pages)
+                const allCachedRequests = await cache.keys();
+                const htmlCachesToDelete = allCachedRequests.filter((req) => {
+                  const url = new URL(req.url);
+                  // Match both:
+                  // - req.destination === 'document' (from fetch events)
+                  // - req.destination === '' (from cache.put with string keys)
+                  return (
+                    (req.destination === 'document' || req.destination === '') &&
+                    url.pathname !== '/' &&
+                    !isSsrPath(url.pathname)
+                  );
+                });
+
+                console.log(`[SW] Clearing ${htmlCachesToDelete.length} old HTML caches`);
+                await Promise.all(htmlCachesToDelete.map((req) => cache.delete(req)));
+
+                // 2. Immediately cache the new HTML for current route
                 await cache.put(normalizedKey, response.clone());
 
+                // 3. Proactively precache new HTML for common routes
+                const commonRoutes = ['/workflow/', '/workspace', '/share/file/'];
+
+                console.log('[SW] Precaching new HTML for common routes');
+                const currentPathname = normalizedKey
+                  ? new URL(normalizedKey, self.location.origin).pathname
+                  : null;
+
+                await Promise.allSettled(
+                  (commonRoutes ?? [])
+                    .filter((route) => route !== currentPathname)
+                    .map(async (route) => {
+                      try {
+                        const routeUrl = new URL(route, self.location.origin).href;
+                        const routeResponse = await fetch(routeUrl, {
+                          cache: 'no-cache',
+                        });
+                        if (routeResponse.ok) {
+                          await cache.put(routeUrl, routeResponse);
+                          console.log('[SW] Precached new HTML:', route);
+                        }
+                      } catch (error) {
+                        console.warn('[SW] Failed to precache route:', route, error);
+                      }
+                    }),
+                );
+
+                // 4. Notify the client
                 const client = clientId ? await self.clients.get(clientId) : null;
                 if (client) {
                   client.postMessage({

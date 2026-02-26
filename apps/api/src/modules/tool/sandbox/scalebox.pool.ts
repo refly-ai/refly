@@ -56,7 +56,19 @@ export class SandboxPool {
 
     const wrapper = await guard(async () => {
       const sandboxId = await this.storage.popFromIdleQueue(this.templateName);
-      await this.cancelPause(sandboxId);
+      if (!sandboxId) {
+        this.logger.debug({ templateName: this.templateName }, 'Idle queue empty');
+        throw new SandboxCreationException('No idle sandbox available');
+      }
+
+      this.logger.debug({ sandboxId, templateName: this.templateName }, 'Popped idle sandbox');
+
+      try {
+        await this.cancelPause(sandboxId);
+      } catch (error) {
+        this.logger.warn({ sandboxId, error }, 'Failed to cancel auto-pause');
+        throw error;
+      }
       return await this.reconnect(sandboxId, context);
     }).orElse(async (error) => {
       this.logger.warn({ error }, 'Failed to reuse idle sandbox');
@@ -165,7 +177,10 @@ export class SandboxPool {
 
     const metadata = await this.storage.loadMetadata(sandboxId);
 
-    guard.ensure(!!metadata).orThrow(() => new SandboxCreationException('Metadata not found'));
+    guard.ensure(!!metadata).orThrow(() => {
+      this.logger.warn({ sandboxId }, 'Sandbox metadata not found for reconnect');
+      return new SandboxCreationException('Metadata not found');
+    });
 
     const onFailed = (failedSandboxId: string, error: Error) => {
       this.enqueueKill(failedSandboxId, `reconnect:${error.message.slice(0, 50)}`);
@@ -173,6 +188,7 @@ export class SandboxPool {
 
     return guard(() => this.wrapperFactory.reconnect(context, metadata, onFailed)).orThrow(
       async (error) => {
+        this.logger.warn({ sandboxId, error }, 'Failed to reconnect sandbox');
         await this.deleteMetadata(sandboxId);
         return new SandboxCreationException(error);
       },
@@ -187,7 +203,7 @@ export class SandboxPool {
     this.killQueue
       .add('kill', { sandboxId, label }, { removeOnComplete: true, removeOnFail: true })
       .then(() => {
-        this.logger.debug({ sandboxId, label }, 'Enqueued async kill task');
+        this.logger.info({ sandboxId, label }, 'Enqueued async kill task');
       })
       .catch((error) => {
         this.logger.warn({ sandboxId, label, error }, 'Failed to enqueue kill task');

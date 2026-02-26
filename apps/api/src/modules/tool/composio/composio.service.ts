@@ -17,13 +17,17 @@ import { genToolsetID } from '@refly/utils';
 import { PrismaService } from '../../common/prisma.service';
 import { RedisService } from '../../common/redis.service';
 import { COMPOSIO_CONNECTION_STATUS } from '../constant/constant';
+import { ComposioToolPostHandlerService } from '../handlers/post/composio-post.service';
+import type { ComposioPostHandlerInput } from '../handlers/post/post.interface';
+import { PreHandlerRegistryService } from '../handlers/pre/pre-registry.service';
 import { ToolInventoryService } from '../inventory/inventory.service';
 import { ResourceHandler } from '../resource.service';
 import { getContext, getCurrentUser, runInContext } from '../tool-context';
-import { ComposioToolPostHandlerService } from '../tool-execution/post-execution/composio-post.service';
-import type { ComposioPostHandlerInput } from '../tool-execution/post-execution/post.interface';
-import { PreHandlerRegistryService } from '../tool-execution/pre-execution/composio/pre-registry.service';
 import { enhanceToolSchema, FILE_UPLOAD_GUIDANCE } from '../utils/schema-utils';
+
+interface ComposioToolCreationContext extends ToolCreationContext {
+  creditBillingMap?: Record<string, { tier: 'standard' | 'premium' }>;
+}
 
 @Injectable()
 export class ComposioService {
@@ -46,6 +50,33 @@ export class ComposioService {
       this.logger.error(message);
     } else {
       this.composio = new Composio({ apiKey });
+    }
+  }
+
+  private parseCreditBillingMap(
+    rawCreditBilling?: string | null,
+  ): Record<string, { tier: 'standard' | 'premium' }> | undefined {
+    if (!rawCreditBilling) {
+      return undefined;
+    }
+
+    try {
+      const parsed = JSON.parse(rawCreditBilling) as unknown;
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        return undefined;
+      }
+
+      const result: Record<string, { tier: 'standard' | 'premium' }> = {};
+      for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+        const tier = (value as { tier?: string })?.tier;
+        if (tier === 'standard' || tier === 'premium') {
+          result[key] = { tier };
+        }
+      }
+
+      return Object.keys(result).length > 0 ? result : undefined;
+    } catch {
+      return undefined;
     }
   }
 
@@ -376,18 +407,25 @@ export class ComposioService {
             name: true,
           },
         });
-        const creditCost = inventory?.creditBilling
-          ? Number.parseFloat(inventory.creditBilling)
-          : 3;
+        const creditBillingMap = this.parseCreditBillingMap(inventory?.creditBilling);
+        let creditCost = 3;
+        if (creditBillingMap) {
+          // sentinel for provider-based billing path
+          creditCost = 0;
+        } else if (inventory?.creditBilling) {
+          const numericCost = Number.parseFloat(inventory.creditBilling);
+          creditCost = Number.isFinite(numericCost) ? numericCost : 3;
+        }
 
         // Fetch tools definition from Composio
         const tools = await this.fetchTools(userId, integrationId);
 
         // Create context for tool creation (user/userId comes from getCurrentUser() at runtime)
-        const toolCreateContext: ToolCreationContext = {
+        const toolCreateContext: ComposioToolCreationContext = {
           connectedAccountId,
           authType,
           creditCost,
+          creditBillingMap,
           toolsetType: toolset.type,
           toolsetKey: toolset.toolset?.key ?? '',
           toolsetName: inventory?.name ?? toolset.name,
@@ -584,7 +622,7 @@ export class ComposioService {
    */
   private createStructuredTool(
     tool: { function?: { name?: string; description?: string; parameters?: Record<string, any> } },
-    context: ToolCreationContext,
+    context: ComposioToolCreationContext,
   ): DynamicStructuredTool {
     const fn = tool.function;
     const toolName = fn?.name ?? 'unknown_tool';
@@ -606,7 +644,7 @@ export class ComposioService {
       schema: toolSchema,
       func: async (
         input: Record<string, unknown>,
-        _runManager: unknown,
+        runManager: unknown,
         runnableConfig: RunnableConfig,
       ) => {
         let cleanup: (() => Promise<void>) | undefined;
@@ -616,6 +654,9 @@ export class ComposioService {
 
           // Extract file_name_title before calling Composio API (it's not part of the actual schema)
           const { file_name_title, ...toolInput } = inputRecord;
+
+          // Extract toolCallId from runManager for billing tracking
+          const toolCallId = (runManager as any)?.runId as string | undefined;
 
           // Run tool execution within context (similar to dynamic-tooling)
           const { result, user, resultId, version, canvasId } = await runInContext(
@@ -681,8 +722,10 @@ export class ComposioService {
             toolsetKey: context.toolsetKey,
             rawResult: result,
             creditCost: context.creditCost,
+            creditBillingMap: context.creditBillingMap,
             toolsetName: context.toolsetName,
             fileNameTitle: (file_name_title as string) || 'untitled',
+            toolCallId,
             context: {
               user,
               resultId,

@@ -839,6 +839,73 @@ const buildWebhookMarkdown = (
     lines.push('');
   }
 
+  // Add "How to Enable Webhook" section
+  const howToEnableTitle = resolveLocaleText(
+    dict,
+    'webhook.howToEnableTitle',
+    'How to Enable Webhook',
+  );
+  lines.push(`## ${howToEnableTitle}`);
+  lines.push('');
+
+  const stepsTitle = resolveLocaleText(
+    dict,
+    'webhook.howToEnableStepsTitle',
+    'Steps to get Webhook URL',
+  );
+  lines.push(`**${stepsTitle}**:`);
+  lines.push('');
+
+  const step1 = resolveLocaleText(
+    dict,
+    'webhook.howToEnableStep1',
+    '1. Visit https://refly.ai/workspace and enter any workflow.',
+  );
+  lines.push(step1);
+  lines.push('');
+  // Reuse screenshot from API docs - step 1 (enter workflow)
+  const step1Image = useZh
+    ? 'https://static.refly.ai/static/screenshot-20260205-112644.png'
+    : 'https://static.refly.ai/static/20260205-114458.jpeg';
+  lines.push(`   ![${step1}](${step1Image})`);
+  lines.push('');
+
+  const step2 = resolveLocaleText(
+    dict,
+    'webhook.howToEnableStep2',
+    '2. Click the "Integration" button in the top right corner.',
+  );
+  lines.push(step2);
+  lines.push('');
+  // Reuse screenshot from API docs - step 2 (click integration button)
+  const step2Image = useZh
+    ? 'https://static.refly.ai/static/screenshot-20260205-112430.png'
+    : 'https://static.refly.ai/static/screenshot-20260205-114520.png';
+  lines.push(`   ![${step2}](${step2Image})`);
+  lines.push('');
+
+  const step3 = resolveLocaleText(
+    dict,
+    'webhook.howToEnableStep3',
+    '3. Click the "Webhook" tab at the top, then toggle the Enable switch at the top.',
+  );
+  lines.push(step3);
+  lines.push('');
+  // New screenshot for enabling webhook
+  const step3Image = useZh
+    ? 'https://static.refly.ai/static/screenshot-20260205-145000.png'
+    : 'https://static.refly.ai/static/screenshot-20260205-145015.png';
+  lines.push(`   ![${step3}](${step3Image})`);
+  lines.push('');
+
+  const step4 = resolveLocaleText(
+    dict,
+    'webhook.howToEnableStep4',
+    '4. Copy the generated Webhook URL for integration.',
+  );
+  lines.push(step4);
+  lines.push('');
+
   lines.push(`## ${resolveLocaleText(dict, 'integration.sections.requestBody', 'Request Body')}`);
   const requestBody = endpoint?.requestBody;
   if (requestBody?.schema) {
@@ -1001,7 +1068,9 @@ const main = () => {
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   fs.writeFileSync(outputPath, fileContent);
 
-  writeDocs({ endpoints, errorCodes, baseUrl });
+  // For documentation, use full production URL
+  const docsBaseUrl = 'https://api.refly.ai/v1';
+  writeDocs({ endpoints, errorCodes, baseUrl: docsBaseUrl });
 };
 
 main();

@@ -44,7 +44,10 @@ export const ResourceTypeForm: React.FC<ResourceTypeFormProps> = React.memo(
           const remainingSlots = MAX_FILES - fileList.length;
           if (remainingSlots <= 0) {
             if (batchFileList?.[0] === file) {
-              message.error(t('canvas.workflow.variables.tooManyFiles', { max: MAX_FILES }));
+              message.error({
+                content: t('canvas.workflow.variables.tooManyFiles', { max: MAX_FILES }),
+                key: 'too-many-files-error',
+              });
             }
             return Upload.LIST_IGNORE;
           }
@@ -52,7 +55,10 @@ export const ResourceTypeForm: React.FC<ResourceTypeFormProps> = React.memo(
           const batchIndex = Array.isArray(batchFileList) ? batchFileList.indexOf(file) : -1;
           if (batchIndex >= remainingSlots) {
             if (batchIndex === remainingSlots) {
-              message.error(t('canvas.workflow.variables.tooManyFiles', { max: MAX_FILES }));
+              message.error({
+                content: t('canvas.workflow.variables.tooManyFiles', { max: MAX_FILES }),
+                key: 'too-many-files-error',
+              });
             }
             return Upload.LIST_IGNORE;
           }
@@ -77,7 +83,10 @@ export const ResourceTypeForm: React.FC<ResourceTypeFormProps> = React.memo(
       } else if (info.file.status === 'done') {
         // Done state is handled by parent
       } else if (info.file.status === 'error') {
-        message.error(`${info.file.name} upload failed`);
+        message.error({
+          content: `${info.file.name} upload failed`,
+          key: 'upload-failed-error',
+        });
       }
     }, []);
 
@@ -118,7 +127,7 @@ export const ResourceTypeForm: React.FC<ResourceTypeFormProps> = React.memo(
             listType="text"
             disabled={uploading}
             itemRender={(_originNode, file) => (
-              <Spin className="w-full" spinning={uploading}>
+              <Spin className="w-full" spinning={file.status === 'uploading'}>
                 <div className="w-full h-10 flex items-center justify-between gap-3 box-border px-3 bg-refly-bg-control-z0 rounded-lg hover:bg-refly-tertiary-hover transition-colors">
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <FileIcon

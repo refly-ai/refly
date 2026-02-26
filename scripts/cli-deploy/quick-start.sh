@@ -97,8 +97,8 @@ check_prerequisites() {
 
     # Check Node version
     NODE_VERSION=$(node -v | sed 's/v//' | cut -d. -f1)
-    if [ "$NODE_VERSION" -lt 20 ]; then
-        log_error "Node.js 20+ required (current: $(node -v))"
+    if [ "$NODE_VERSION" -lt 24 ]; then
+        log_error "Node.js 24+ required (current: $(node -v))"
         exit 1
     fi
 

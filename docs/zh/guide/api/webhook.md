@@ -4,6 +4,24 @@
 
 通过 Webhook 触发当前画布的工作流，并在运行历史中追踪执行状态。
 
+## 如何开启 Webhook
+
+**获取 Webhook URL 的步骤**:
+
+1. 访问 https://refly.ai/workspace 并进入任意一个工作流。
+
+   ![1. 访问 https://refly.ai/workspace 并进入任意一个工作流。](https://static.refly.ai/static/screenshot-20260205-112644.png)
+
+2. 点击右上角"集成"按钮。
+
+   ![2. 点击右上角"集成"按钮。](https://static.refly.ai/static/screenshot-20260205-112430.png)
+
+3. 点击顶部的"Webhook"标签页，然后打开顶部的 Enable 开关。
+
+   ![3. 点击顶部的"Webhook"标签页，然后打开顶部的 Enable 开关。](https://static.refly.ai/static/screenshot-20260205-145000.png)
+
+4. 复制生成的 Webhook URL 用于集成。
+
 ## 请求体
 Webhook 变量请求体
 

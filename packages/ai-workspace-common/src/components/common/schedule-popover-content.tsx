@@ -1,5 +1,5 @@
 import { memo, useCallback, useMemo } from 'react';
-import { Button, Switch, TimePicker, Select, Divider, Spin } from 'antd';
+import { Button, Switch, TimePicker, Select, Divider, Spin, Tooltip } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from '@refly-packages/ai-workspace-common/utils/router';
 import { time } from '@refly-packages/ai-workspace-common/utils/time';
@@ -46,6 +46,15 @@ export interface SchedulePopoverContentProps {
   isCreditLoading?: boolean;
   showUpgrade?: boolean;
   onUpgradeClick?: () => void;
+  // New props for schedule count
+  totalEnabledSchedules?: number;
+  scheduleQuota?: number;
+  hasLoadedInitially?: boolean;
+  isLoadingScheduleCount?: boolean;
+  // Props for quota check
+  planType?: string;
+  setCreditInsufficientModalVisible?: (visible: boolean, reason?: any, source?: string) => void;
+  setScheduleLimitModalVisible?: (visible: boolean) => void;
 }
 
 export const WEEKDAYS = [
@@ -127,6 +136,13 @@ export const SchedulePopoverContent = memo(
     isCreditLoading,
     showUpgrade,
     onUpgradeClick,
+    totalEnabledSchedules,
+    scheduleQuota,
+    hasLoadedInitially,
+    isLoadingScheduleCount,
+    planType,
+    setCreditInsufficientModalVisible,
+    setScheduleLimitModalVisible,
   }: SchedulePopoverContentProps) => {
     const { t, i18n } = useTranslation();
     const navigate = useNavigate();
@@ -292,12 +308,77 @@ export const SchedulePopoverContent = memo(
       ],
     );
 
+    // Handle Switch change with quota check
+    const handleSwitchChange = useCallback(
+      (checked: boolean) => {
+        if (checked) {
+          // Check if this canvas already has an ENABLED schedule (only enabled schedules count toward quota)
+          const hasEnabledSchedule = !!isEnabled;
+
+          // If canvas doesn't have enabled schedule and quota is reached, show appropriate modal
+          if (!hasEnabledSchedule && (totalEnabledSchedules ?? 0) >= (scheduleQuota ?? 0)) {
+            // Close popover first
+            onClose?.();
+
+            if (planType === 'free') {
+              // Free user: show credit insufficient modal
+              setCreditInsufficientModalVisible?.(true, undefined, 'schedule');
+            } else {
+              // Paid user: show schedule limit reached modal
+              setScheduleLimitModalVisible?.(true);
+            }
+            return; // Don't proceed with enabling
+          }
+        }
+
+        // Proceed with the original enable/disable logic
+        onEnabledChange(checked);
+      },
+      [
+        isEnabled,
+        totalEnabledSchedules,
+        scheduleQuota,
+        planType,
+        setCreditInsufficientModalVisible,
+        setScheduleLimitModalVisible,
+        onEnabledChange,
+        onClose,
+      ],
+    );
+
     return (
       <div className="w-[400px] space-y-3 p-3" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-3">
             <div className="text-base font-semibold">{t('schedule.title') || 'Schedule'}</div>
+            <Tooltip
+              title={
+                totalEnabledSchedules >= scheduleQuota
+                  ? t('schedule.limited') || 'Schedule Limited'
+                  : t('schedule.tooltipText') ||
+                    'Schedulable timer count, cap rises to 20 after upgrading to Plus'
+              }
+              placement="bottom"
+            >
+              <span
+                className={`text-xs font-medium cursor-pointer ${
+                  totalEnabledSchedules >= scheduleQuota
+                    ? 'text-red-500 dark:text-red-400'
+                    : 'text-gray-500 dark:text-gray-400'
+                }`}
+              >
+                {!hasLoadedInitially && isLoadingScheduleCount ? (
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-3 bg-gray-300 dark:bg-gray-600 rounded animate-pulse" />
+                    <span>/</span>
+                    <div className="w-2 h-3 bg-gray-300 dark:bg-gray-600 rounded" />
+                  </div>
+                ) : (
+                  `${totalEnabledSchedules}/${scheduleQuota}`
+                )}
+              </span>
+            </Tooltip>
             {nextRunTime && (
               <div className="text-xs text-gray-500">
                 {t('schedule.nextRun') || 'Next run'}: {nextRunTime}
@@ -310,7 +391,7 @@ export const SchedulePopoverContent = memo(
               checked={isEnabled}
               loading={isEnabledLoading}
               disabled={isEnabledLoading}
-              onChange={onEnabledChange}
+              onChange={handleSwitchChange}
             />
           </div>
         </div>
@@ -322,7 +403,7 @@ export const SchedulePopoverContent = memo(
               key={freq}
               type="default"
               disabled={isEnabled || isEnabledLoading}
-              className={`flex-1 h-11 ${
+              className={`schedule-frequency-button flex-1 h-11 ${
                 frequency === freq
                   ? '!bg-transparent !border-teal-500 !text-teal-600 hover:!border-teal-600 hover:!text-teal-700 hover:!bg-transparent'
                   : '!bg-transparent hover:!bg-transparent hover:border-gray-300 hover:text-gray-700 dark:hover:border-gray-600 dark:hover:text-gray-300'

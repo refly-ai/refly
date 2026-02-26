@@ -133,7 +133,8 @@ Variables (also known as "User Input") are dynamic inputs provided at workflow r
 | description | string | What this variable represents |
 | required | boolean | Whether this input is required (default: false) |
 | resourceTypes | array | For resource type only: ["document", "image", "audio", "video"] |
-| value | array | For string: `[{ type: "text", text: "value" }]`; For resource: `[]` (always empty) |
+| isSingle | boolean | For resource type: false to accept multiple files (default: true for single file) |
+| value | array | For string: `[{ type: "text", text: "value" }]`; For resource: see File Input Value below |
 
 **Variable Design Principles**:
 - **Maximize Extensibility** — Always identify user-configurable parameters that would make the workflow reusable
@@ -144,23 +145,29 @@ Variables (also known as "User Input") are dynamic inputs provided at workflow r
 - **Sensible Defaults** — Provide reasonable default values when possible to reduce user friction
 
 **File Input Recognition** — Generate `variableType: "resource"` when user mentions:
-- "上传文件/账单/报告/图片/视频..."
 - "upload a PDF/CSV/Excel/image/file..."
-- "用户上传一个文件，然后..."
-- "根据用户上传的xxx进行分析"
 - "based on the uploaded file..."
 - "analyze the document/image/video that user provides"
+- Chinese equivalents: "上传文件/账单/报告/图片/视频", "用户上传一个文件，然后...", "根据用户上传的xxx进行分析"
 
 **Required vs Optional**:
 - **required: true** — When user uses strong constraint words:
-  - "必须上传" / "需要上传" / "请上传" / "上传...来..."
-  - "must upload" / "need to upload" / "require" / "based on the uploaded file only"
+  - "must upload", "need to upload", "require", "based on the uploaded file only"
+  - Chinese equivalents: "必须上传", "需要上传", "请上传", "上传...来..."
 - **required: false** (default) — When:
-  - "可以上传" / "可选上传" / "optionally upload"
-  - No explicit constraint mentioned
-  - User says "if available" / "如果有的话"
+  - "optionally upload", "if available", no explicit constraint mentioned
+  - Chinese equivalents: "可以上传", "可选上传", "如果有的话"
 
-**File Input Value**: Always generate with empty value array: `value: []`
+**File Input Value**:
+- **No context files** → `value: []`
+- **User references uploaded files** (e.g., "analyze these files", "use these images") → Pre-fill from context:
+  ```json
+  "value": [{ "type": "resource", "resource": { "fileId": "<context.files[].fileId>", "name": "<name>", "fileType": "<image|document|audio|video>" }}]
+  ```
+- **Multiple files** → Set `isSingle: false`
+- **Reusable template requested** → Keep `value: []`
+
+MIME mapping: `image/*`→image, `application/pdf|text/*|msword|vnd.*`→document, `audio/*`→audio, `video/*`→video
 
 ## Task Design
 
@@ -244,6 +251,22 @@ User instructions take precedence for overridable rules.
 ```
 
 **Workflow**: Analyze Data (execute_code) → Generate Report (generate_doc)
+
+---
+
+### Example 2.5: Pre-filling with Uploaded Files
+
+**Context files**: `[{ "fileId": "f1", "name": "design1.png", "type": "image/png" }, { "fileId": "f2", "name": "design2.png", "type": "image/png" }]`
+
+**Request**: "Use these 2 images as input, analyze the design style"
+
+**Variable**:
+```json
+{ "variableId": "var-1", "variableType": "resource", "name": "design_images", "resourceTypes": ["image"], "isSingle": false, "value": [
+  { "type": "resource", "resource": { "fileId": "f1", "name": "design1.png", "fileType": "image" }},
+  { "type": "resource", "resource": { "fileId": "f2", "name": "design2.png", "fileType": "image" }}
+]}
+```
 
 ---
 

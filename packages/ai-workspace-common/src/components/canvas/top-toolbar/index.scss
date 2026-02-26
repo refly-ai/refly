@@ -126,6 +126,82 @@
   }
 }
 
+// Deactivate modal button styles
+.deactivate-schedule-modal {
+  .ant-modal-footer {
+    display: flex !important;
+    gap: 12px !important;
+    justify-content: flex-end !important;
+    // Left button (Cancel) - light theme, tertiary type
+    .ant-btn:first-child {
+      width: 82px !important;
+      height: 32px !important;
+      border-radius: 100px !important;
+      border-width: 0.5px !important;
+      padding: 0 16px !important;
+      background: var(--refly-bg-control-z0) !important;
+      border: 0.5px solid var(--refly-Control-Border) !important;
+      color: var(--refly-text-0) !important;
+      font-size: 14px !important;
+      font-weight: 400 !important;
+      margin: 0 !important;
+
+      &:hover {
+        background: var(--refly-bg-control-z0) !important;
+        border-color: var(--refly-Control-Border) !important;
+        opacity: 0.8 !important;
+      }
+
+      &:focus {
+        background: var(--refly-bg-control-z0) !important;
+        border-color: var(--refly-Control-Border) !important;
+      }
+
+      &:disabled {
+        background: var(--refly-bg-control-z0) !important;
+        border-color: var(--refly-Control-Border) !important;
+        opacity: 0.5 !important;
+      }
+    }
+
+    // Right button (Deactivate) - solid theme, danger type
+    .ant-btn:last-child {
+      width: 103px !important;
+      height: 32px !important;
+      border-radius: 100px !important;
+      padding: 0 16px !important;
+      background: var(--refly-text-0) !important;
+      border: none !important;
+      color: var(--refly-bg-body-z0) !important;
+      font-size: 14px !important;
+      font-weight: 400 !important;
+      margin: 0 !important;
+
+      &:hover {
+        background: var(--refly-text-0) !important;
+        opacity: 0.8 !important;
+      }
+
+      &:focus {
+        background: var(--refly-text-0) !important;
+      }
+
+      &:disabled {
+        background: var(--refly-text-0) !important;
+        opacity: 0.5 !important;
+      }
+
+      &.ant-btn-loading {
+        background: var(--refly-text-0) !important;
+
+        .ant-btn-loading-icon {
+          color: var(--refly-bg-body-z0) !important;
+        }
+      }
+    }
+  }
+}
+
 .top-toolbar-button-group {
   display: inline-flex;
   align-items: center;
@@ -158,13 +234,6 @@
   cursor: pointer;
 }
 
-.top-toolbar-group-button-schedule {
-  flex: 1.2;
-}
-
-.top-toolbar-group-button-integration {
-  flex: 0.8;
-}
 
 .top-toolbar-group-button.ant-btn {
   border-radius: 0;
@@ -182,14 +251,15 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
 }
 
 .schedule-toolbar-icon {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   color: currentColor;
+  flex-shrink: 0;
 }
 
 .top-toolbar-button-divider {
@@ -208,7 +278,8 @@
 }
 
 .integration-docs-button-icon {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   display: inline-block;
+  flex-shrink: 0;
 }

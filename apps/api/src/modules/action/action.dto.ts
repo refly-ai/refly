@@ -46,10 +46,12 @@ function actionStepPO2DTO(step: ActionStepDetail, options?: SanitizeOptions): Ac
 }
 
 export function actionMessagePO2DTO(message: ActionMessageModel): ActionMessage {
+  const isPtc = message.toolCallId?.startsWith('ptc:');
   return {
     ...pick(message, ['messageId', 'content', 'reasoningContent', 'usageMeta', 'toolCallId']),
     type: message.type as ActionMessageType,
     toolCallMeta: safeParseJSON(message.toolCallMeta || '{}') as ToolCallMeta,
+    ...(isPtc && { isPtc: true }),
     createdAt: message.createdAt.toJSON(),
     updatedAt: message.updatedAt.toJSON(),
   };

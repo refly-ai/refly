@@ -1,30 +1,67 @@
-<img width="1920" height="1080" alt="img_v3_02uh_63c35442-a356-4399-b10f-72f4ffd645fg" src="https://github.com/user-attachments/assets/57011a01-27a2-4f4e-a34c-1962927e1b16" />
+
+<img width="2880" height="1620" alt="the first open-source agent skills builder" src="https://github.com/user-attachments/assets/2609adbb-c8db-4ca4-8404-12eb32d19cf1" />
 
 
-<div align="right">
-
-**English | [中文](README_CN.md)**
-
-</div>
-
-# Refly — The First Open-Source Agent Skills Builder Powered by Vibe Workflow
-
+# Refly — Agent Skills Builder Powered by Vibe Workflow
+<p align="right">
+  <a href="README.md"><u>English</u></a> · <a href="README_CN.md"><u>中文</u></a>
+</p>
 <p align="center">
   <a href="https://github.com/refly-ai/refly">
-    <img src="https://img.shields.io/github/stars/refly-ai/refly?style=social&label=Star%20us%20on%20GitHub" alt="GitHub stars">
+    <img src="https://img.shields.io/github/stars/refly-ai/refly?style=flat&colorA=080f12&colorB=1fa669&logo=github" alt="GitHub stars">
+  </a>
+  <a href="https://refly.ai/workspace">
+    <img src="https://img.shields.io/badge/refly.ai-007bff?style=flat&colorA=080f12&colorB=007bff&logo=google-chrome&logoColor=white" alt="Website">
+  </a>
+  <a href="https://www.youtube.com/@refly-ai">
+    <img src="https://img.shields.io/badge/YouTube-Refly%20AI-FF0000?style=flat&colorA=080f12&colorB=FF0000&logo=youtube&logoColor=white" alt="YouTube">
+  </a>
+  <a href="https://discord.com/invite/YVuYFjFvRC">
+    <img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdiscord.com%2Fapi%2Finvites%2FYVuYFjFvRC%3Fwith_counts%3Dtrue&query=%24.approximate_member_count&suffix=%20members&logo=discord&logoColor=white&label=%20&color=7389D8&labelColor=6A7EC2" alt="Discord">
+  </a>
+  <a href="https://github.com/refly-ai/refly-skills">
+    <img src="https://img.shields.io/badge/refly--skills-Repo-2ea043?style=flat&colorA=080f12&logo=github" alt="Refly Skills">
+  </a><br>
+  <a href="https://docs.refly.ai/">
+    <img src="https://img.shields.io/badge/docs.refly.ai-Docs-2ea043?style=flat&colorA=080f12&logo=readthedocs" alt="Docs">
+  </a>
+  <a href="https://deepwiki.com/refly-ai/refly">
+    <img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/license-ReflyAI%20License-2ea043?style=flat&colorA=080f12" alt="License">
+  </a>
+  <a href="https://x.com/reflyai">
+    <img src="https://img.shields.io/badge/%40reflyai-black?style=flat&logo=x&labelColor=%23101419&color=%232d2e30" alt="X (formerly Twitter) Follow">
   </a>
 </p>
 
-[APIs for Lovable](#use-case-1-api-integration) · [Webhooks for Slack/Lark](#use-case-2-webhook-for-Lark) · [Skills for Claude Code](#use-case-3-skills-for-claude-code)
+
+[APIs for Lovable](#use-case-1-api-integration) · [Webhooks for Lark/Feishu](#use-case-2-webhook-for-lark-feishu) · [Skills for Claude Code](#use-case-3-skills-for-claude-code) · [Build Clawdbot](#use-case-4-build-clawdbot)
 
 Skills are not prompts. They are durable infrastructure.
 
-Refly is the first open-source platform for building stable, atomic, and versioned agent skills. Skills are deterministic agent capabilities—reusable across workflows, teams, and runtimes.
+Refly is the first open-source platform for building stable, atomic, and versioned agent skills. 
+
+<a href="https://refly.ai/workspace"><u>Try it Now</u></a> 
+
+---
+## Refly Skills
+
+Refly Skills is the official executable skill registry for Refly.
+
+- ⚡ **Run instantly**: Execute skills in Refly with one click
+- 🧩 **Reusable infrastructure**: Versioned skills, not one-off prompts
+- 🔌 **Export anywhere**: Ship skills to Claude Code or deploy as APIs
+- 🌍 **Community-powered**: Import, fork, and publish your own skills
+
+Explore the registry: <a href="https://github.com/refly-ai/refly-skills"><u>Refly Skills Repo</u></a> 
+
+Skills are deterministic agent capabilities—reusable across workflows, teams, and runtimes.
 
 **TL;DR**: Refly compiles your enterprise SOPs into executable agent skills. Built in 3 minutes. Shipped anywhere.
 
 ---
-
 ## Quick Start
 
 ### Deploy Refly
@@ -35,6 +72,9 @@ Refly is the first open-source platform for building stable, atomic, and version
 - 🔌 **[API Reference](https://github.com/refly-ai/refly/tree/main/docs/en/guide/api)**  
   Complete API documentation for integrating Refly into your applications.
 
+> [!TIP]
+> Want to explore instantly? Open the hosted workspace: <a href="https://refly.ai/workspace"><u>Refly Workspace</u></a> 
+
 ### What's Next?
 
 After deployment, choose your path based on your use case:
@@ -43,170 +83,11 @@ After deployment, choose your path based on your use case:
 |-------------|-----------|------|
 | 🔧 **Build my first workflow** | [Create a Workflow](#create-your-first-workflow) | 5 mins |
 | 🔌 **Call workflows via API** | [API Integration](#use-case-1-api-integration) | 10 mins |
-| 💬 **Connect to Lark** | [Webhook Setup](#use-case-2-webhook-for-Lark) | 15 mins |
-| 🤖 **Export for Claude Code** | [Export Skills](#use-case-3-skills-for-claude-code) | 15mins |
-| 🦞  **Build a ClawdBot** | [Build Clawdbot](#use-case-4-build-clawdbot) | 20 mins |
+| 💬 **Connect to Lark/Feishu** | [Webhook Setup](#use-case-2-webhook-for-lark-feishu) | 15 mins |
+| 🤖 **Export for Claude Code** | [Export Skills](#use-case-3-skills-for-claude-code) | 15 mins |
+| 🦞  **Build a Clawdbot** | [Build Clawdbot](#use-case-4-build-clawdbot) | 20 mins |
 ---
 
-## Create Your First Workflow
-
-> **Note**: This section assumes you have completed [self-deployment](https://docs.refly.ai/community-version/self-deploy/) and can access Refly at `http://localhost:5700`
-
-### Step 1: Register and Log In
-
-1. Open `http://localhost:5700` in your browser
-2. Register with your email and password
-3. Configure your first model provider:
-   - Click the account icon (top right) → Settings
-   - Add a provider (e.g., OpenAI, Anthropic)
-   - Add your first chat model
-   - Set it as default
-
-> 📖 Detailed setup with screenshots: [Self-Deployment Guide](https://docs.refly.ai/community-version/self-deploy/#start-using-refly)
-
-### Step 2: Create a Workflow
-
-1. Click **"New Workflow"** on the home page
-2. Choose a template or start from scratch:
-   - **Blank Canvas**: Build with visual nodes
-   - **Vibe Mode**: Describe your workflow in natural language
-
-**Example - Product Research Workflow**:
-```
-1. Add "Web Search" node - searches for product information
-2. Add "LLM" node - analyzes search results
-3. Add "Output" node - formats the report
-4. Connect the nodes
-5. Click "Save"
-```
-
-### Step 3: Test Your Workflow
-
-1. Click **"Run"** button
-2. Enter test input (e.g., a product URL)
-3. View execution results in real-time
-4. Check logs if something fails
-
----
-
-## Use Cases
-
-### Use Case 1: API Integration
-
-**Goal**: Call your workflow from your application via REST API
-
-#### Get Your API Credentials
-
-1. Go to **Settings** → **API Keys**
-2. Click **"Generate New Key"**
-3. Copy your API key (keep it secure!)
-
-#### Make Your First API Call
-```bash
-curl -X POST https://your-refly-instance.com/api/v1/workflows/{WORKFLOW_ID}/execute \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "input": {
-      "product_url": "https://example.com/product"
-    }
-  }'
-```
-
-**Response**:
-```json
-{
-  "execution_id": "exec_abc123",
-  "status": "running"
-}
-```
-
-#### Check Execution Status
-```bash
-curl https://your-refly-instance.com/api/v1/executions/{execution_id} \
-  -H "Authorization: Bearer YOUR_API_KEY"
-```
-
-📖 **Full API Documentation**: [API Reference](https://github.com/refly-ai/refly/tree/main/docs/en/guide/api)
-
----
-
-### Use Case 2: Webhook for Lark
-
-**Goal**: Trigger your workflow when someone sends a message in Lark
-
-#### Prerequisites
-
-- A Lark workspace with admin access
-- A workflow created in Refly
-
-#### Setup Steps
-
-1. **In Refly**:
-   - Open your workflow
-   - Click **"Settings"** → **"Triggers"**
-   - Enable **"Webhook Trigger"**
-   - Copy the Webhook URL
-
-2. **In Slack**:
-   - Go to [api.feishu.com/apps](https://open.feishu.cn/app)
-   - Create a **"Custom App"**
-   - Navigate to **"Event Subscriptions"**
-   - Paste the Refly Webhook URL into **"Request URL"**
-   - Click **"Add Event"** and select **"Receive Message"**
-   - Go to **"Version Management"** and publish the app
-     
-
-3. **Test**:
-   - In Feishu, find your bot in the search barSend a message (e.g., `analyze report.pdf`)
-   - Your workflow executes and returns results via the webhook
-
-
-> ⚠️ **Note**: Detailed Slack integration guide coming soon. For now, see [API Reference](https://github.com/refly-ai/refly/tree/main/docs/en/guide/api) for webhook configuration.
-
----
-### Use Case 3: Skills for Claude Code
-
-**Goal**: Export your Refly workflows as Claude Code skills
-
-#### Quick Start
-
-1. **Install CLI**
-```bash
-npm install -g @refly-ai/refly-skills
-```
-
-2. **Export Workflow**
-```bash
-refly-skills export --workflow-id <your-workflow-id>
-```
-
-This generates a `.refly` skill file in the `skills/` directory.
-
-3. **Use in Claude Code**
-
-The exported skill is automatically available in Claude Code. Claude can now invoke your workflow as a tool!
-
-#### Example
-```bash
-# Export your product research workflow
-refly-skills export --workflow-id wf_product_research
-
-# Claude Code can now use it:
-User: "Research this product and analyze competitors"
-Claude: [Uses product_research skill] → Returns detailed analysis
-```
-
-📖 **Documentation**: [refly-ai/refly-skills](https://github.com/refly-ai/refly-skills)
-
----
-
-### Use Case 4: Build Clawdbot
-
-📖 **Tutorial**: (https://powerformer.feishu.cn/wiki/YxMRwsQFriAMNukKr5Yc9OjMnnf)
-
-
----
 
 ## Why Refly?
 
@@ -214,7 +95,7 @@ Most AI Agents fail in production because they rely on "Vibe-coded" scripts and 
 
 Refly bridges the gap between raw APIs and intelligent agents. We allow you to codify messy business logic into structured, version-controlled Agent skills that any agent can invoke with 100% reliability.
 
-**Stop hard-coding tools.** Build modular skills once in Refly's visual IDE and deploy them as MCP servers, standard APIs, or portable SDKs to any agent framework.
+**Stop hard-coding tools.** Build modular skills once in Refly's visual IDE and deploy them as MCP servers, standard APIs, or portable SDKs to any agent framework. <a href="https://refly.ai/workspace"><u>Try it Now</u></a> 
 
 ---
 
@@ -239,7 +120,7 @@ Break the "black box" of AI execution with a stateful runtime designed for deter
 
 Unify MCP integrations, tools, models, and reusable skills into a single execution layer.
 
-- **Universal Delivery**: Export as APIs for Lovable, webhooks for Slack, or native tools for Claude Code and Cursor.
+- **Universal Delivery**: Export as APIs for Lovable, webhooks for Slack or Lark/Feishu, or native tools for Claude Code and Cursor.
 - **Stable Scheduling**: Run workflows reliably on schedule with managed execution.
 
 ### 🏛️ Govern as Assets (Skill Registry)
@@ -261,8 +142,10 @@ Bring your own data and logic into Refly with zero friction.
 
 - **3,000+ Native Tools**: Seamlessly integrate with Stripe, Slack, Salesforce, GitHub, etc.
 
-A full list of supported model and tools providers can be found here
-<img width="1920" height="627" alt="img_v3_02uh_37c05264-a390-4ceb-9a96-efce1a61d1eg" src="https://github.com/user-attachments/assets/0fdf8214-e244-41ae-b108-59cfa12a8600" />
+A full list of supported model and tools providers can be found in [provider-catalog.json](./config/provider-catalog.json).
+
+<img width="3840" height="1254" alt="part supported tools integrations in refly" src="https://github.com/user-attachments/assets/954f43bd-356d-48c4-a3b9-1c0f2e781a43" />
+
 
 - **MCP Support**: Full compatibility with Model Context Protocol servers
 - **Private Skill Connectors**: Connect to your databases, scripts, and internal systems
@@ -271,12 +154,13 @@ A full list of supported model and tools providers can be found here
 
 Export your deterministic skills to any environment where work happens.
 
-<img width="1920" height="1080" alt="img_v3_02uh_2599ba2c-18f0-445d-b95c-aa7da6e41aag" src="https://github.com/user-attachments/assets/e4a73abd-1f01-4f84-9499-a535f6440a63" />
+<img width="2688" height="1512" alt="deterministic skills can be exported to cursor, claude code and etc." src="https://github.com/user-attachments/assets/23e7a204-4dce-432f-b8bc-65839061d086" />
+
 
 
 - **AI Coding Tools**: Native export for Claude Code and Cursor (coming soon)
 - **App Builders**: Power Lovable or custom frontends via stateful APIs
-- **Automation Hubs**: Deploy as webhooks for Slack or Microsoft Teams
+- **Automation Hubs**: Deploy as webhooks for Slack, Lark/Feishu, or Microsoft Teams
 - **Agent Frameworks**: Compatible with AutoGen, Manus, LangChain, and custom Python stacks
 
 ---
@@ -312,6 +196,163 @@ Refly acts as the Agent skills builder, providing the governance and reliability
 | **Total Cost (TCO)** | Overhead grows with<br><sub>workflow complexity</sub> | High engineering<br><sub>maintenance costs</sub> | **Minimal DSL**<br><sub>Reduces token spend</sub> |
 
 ---
+## Create Your First Workflow
+
+> [!NOTE]
+> This section assumes you have completed [self-deployment](https://docs.refly.ai/community-version/self-deploy/) and can access Refly at `http://localhost:5700`
+
+**Step 1: Register and Log In**
+
+1. Open `http://localhost:5700` in your browser
+2. Register with your email and password
+3. Configure your first model provider:
+   - Click the account icon (top right) → Settings
+   - Add a provider (e.g., OpenAI, Anthropic)
+   - Add your first chat model
+   - Set it as default
+
+> 📖 Detailed setup with screenshots: [Self-Deployment Guide](https://docs.refly.ai/community-version/self-deploy/#start-using-refly)
+
+**Step 2: Create a Workflow**
+
+1. Click **"New Workflow"** on the home page
+2. Choose a template or start from scratch:
+   - **Blank Canvas**: Build with visual nodes
+   - **Vibe Mode**: Describe your workflow in natural language
+
+**Example - Product Research Workflow**:
+```text
+1. Add "Web Search" node - searches for product information
+2. Add "LLM" node - analyzes search results
+3. Add "Output" node - formats the report
+4. Connect the nodes
+5. Click "Save"
+```
+
+> [!TIP]
+> If you want the fastest path, start with Vibe Mode and iterate from a template.
+
+**Step 3: Test Your Workflow**
+
+1. Click "Run" button
+2. Enter test input (e.g., a product URL)
+3. View execution results in real-time
+4. Check logs if something fails
+
+---
+
+## Use Cases
+
+### Use Case 1: API Integration
+
+**Goal**: Call your workflow from your application via REST API
+
+**Get Your API Credentials**
+
+1. Go to Settings → API Keys
+2. Click "Generate New Key"
+3. Copy your API key (keep it secure!)
+
+**Make Your First API Call**
+```bash
+curl -X POST https://your-refly-instance.com/api/v1/workflows/{WORKFLOW_ID}/execute \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "input": {
+      "product_url": "https://example.com/product"
+    }
+  }'
+```
+
+**Response**:
+```json
+{
+  "execution_id": "exec_abc123",
+  "status": "running"
+}
+```
+
+**Check Execution Status**
+```bash
+curl https://your-refly-instance.com/api/v1/executions/{execution_id} \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+📖 **Full API Documentation**: [API Reference](https://github.com/refly-ai/refly/tree/main/docs/en/guide/api)
+
+
+
+
+### Use Case 2: Webhook for Lark (Feishu)
+
+**Goal**: Trigger your workflow when someone sends a message in Lark
+
+**Prerequisites**
+
+- A Lark workspace with admin access
+- A workflow created in Refly
+
+**Setup Steps**
+
+1. **In Refly**:
+   - Open your workflow
+   - Click "Settings" → "Triggers"
+   - Enable "Webhook Trigger"
+   - Copy the Webhook URL
+
+2. **In Lark/Feishu**:
+   - Go to [api.feishu.com/apps](https://open.feishu.cn/app)
+   - Create a "Custom App"
+   - Navigate to "Event Subscriptions"
+   - Paste the Refly Webhook URL into "Request URL"
+   - Click "Add Event" and select "Receive Message"
+   - Go to "Version Management" and publish the app
+     
+
+3. **Test**:
+   - In Feishu, find your bot in the search bar and send a message (e.g., `analyze report.pdf`)
+   - Your workflow executes and returns results via the webhook
+
+
+> ⚠️ **Note**: Detailed Lark/Feishu integration guide coming soon. For now, see [API Reference](https://github.com/refly-ai/refly/tree/main/docs/en/guide/api) for webhook configuration.
+
+
+### Use Case 3: Skills for Claude Code
+
+**Goal**: Publish your Refly workflows as Claude Code skills
+
+**Quick Start**
+
+1. **Install Refly CLI**
+```bash
+npm install -g @powerformer/refly-cli
+```
+
+2. **Install a Skill**
+```bash
+# Via Refly CLI
+refly skill install <skill-id>
+
+#Via npx
+npx skills add refly-ai/<skill-name>
+```
+
+3. **Publish a Skill**
+```bash
+refly skill publish <skill-id>
+```
+
+The skill is now available in Claude Code, Cursor, and MCP-powered workflows. Agent can invoke your workflow as a tool!
+
+
+📖 **Documentation**: <a href="https://github.com/refly-ai/refly-skills"><u>Refly Skills</u></a> 
+
+### Use Case 4: Build Clawdbot
+
+📖 **Tutorial**: <a href="https://powerformer.feishu.cn/wiki/Gz4swMzn0izknZki3g4coSgvnNe"><u>Build Clawdbot Tutorial</u></a> 
+
+***
 
 ## Community & Support
 
@@ -323,6 +364,12 @@ Refly acts as the Agent skills builder, providing the governance and reliability
 
 ---
 
+## Join Us
+
+Join our community to get help, share your experience, and connect with other Refly users: <a href="https://docs.refly.ai/community/contact-us"><u>Refly Community</u></a>
+
+---
+
 ## Contributing
 
 For those who'd like to contribute code, see our [Contribution Guide](CONTRIBUTING.md). At the same time, please consider supporting Refly by sharing it on social media and at events and conferences.
@@ -330,6 +377,10 @@ For those who'd like to contribute code, see our [Contribution Guide](CONTRIBUTI
 > We are looking for contributors to help translate Refly into languages other than Mandarin or English. If you are interested in helping, please see the [Contribution Guide](CONTRIBUTING.md) for more information.
 
 ---
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=refly-ai/refly&type=Date)](https://star-history.com/#refly-ai/refly&Date)
 
 ## License
 

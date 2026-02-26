@@ -92,9 +92,10 @@ export const ApiKeyModal = memo(({ open, onClose }: ApiKeyModalProps) => {
         title={t('webhook.apiKey.title')}
         width={550}
         destroyOnClose
+        centered
         className="api-key-management-modal"
       >
-        <div className="px-6 pb-3">
+        <div className="p-6">
           <p className="text-sm text-[var(--refly-text-2)] mb-4 leading-normal">
             {t('webhook.apiKey.description')}
           </p>
@@ -161,9 +162,10 @@ export const ApiKeyModal = memo(({ open, onClose }: ApiKeyModalProps) => {
         title={createdKey ? t('webhook.apiKey.keyCreated') : t('webhook.apiKey.create')}
         width={480}
         destroyOnClose
+        centered
         className="api-key-create-modal"
       >
-        <div className="px-6 pb-3">
+        <div className="p-6">
           {createdKey ? (
             <>
               <div className="text-xs text-[var(--refly-func-error-default,var(--ant-color-error,#ff4d4f))] -mt-2 mb-4 leading-normal">
@@ -181,7 +183,10 @@ export const ApiKeyModal = memo(({ open, onClose }: ApiKeyModalProps) => {
                 />
               </div>
               <div className="flex items-center justify-end gap-3">
-                <Button type="primary" onClick={handleCloseCreateModal}>
+                <Button
+                  className="api-key-create-confirm-btn-black"
+                  onClick={handleCloseCreateModal}
+                >
                   {t('common.close')}
                 </Button>
               </div>
@@ -207,10 +212,10 @@ export const ApiKeyModal = memo(({ open, onClose }: ApiKeyModalProps) => {
               <div className="flex items-center justify-end gap-3">
                 <Button onClick={handleCloseCreateModal}>{t('common.cancel')}</Button>
                 <Button
-                  type="primary"
                   onClick={handleCreate}
                   loading={loading}
                   disabled={isMutating}
+                  className="api-key-create-confirm-btn-black"
                 >
                   {t('common.create')}
                 </Button>
@@ -228,28 +233,29 @@ export const ApiKeyModal = memo(({ open, onClose }: ApiKeyModalProps) => {
         title={t('webhook.apiKey.deleteTitle')}
         width={480}
         destroyOnClose
+        centered
         className="api-key-delete-modal"
       >
-        <div className="mb-6">
-          <p className="text-sm text-[var(--refly-text-2)] leading-relaxed m-0">
-            {t('webhook.apiKey.deleteDescription')}
-          </p>
-        </div>
+        <div className="p-6">
+          <div className="mb-6">
+            <p className="text-sm text-refly-text-0 leading-relaxed m-0">
+              {t('webhook.apiKey.deleteDescription')}
+            </p>
+          </div>
 
-        <div className="flex items-center justify-end gap-3">
-          <Button onClick={handleDeleteCancel} className="api-key-delete-cancel-btn">
-            {t('common.cancel')}
-          </Button>
-          <Button
-            danger
-            type="primary"
-            onClick={handleDeleteConfirm}
-            loading={loading}
-            disabled={isMutating}
-            className="api-key-delete-confirm-btn"
-          >
-            {t('common.delete')}
-          </Button>
+          <div className="flex items-center justify-end gap-3">
+            <Button onClick={handleDeleteCancel} className="api-key-delete-cancel-btn">
+              {t('common.cancel')}
+            </Button>
+            <Button
+              onClick={handleDeleteConfirm}
+              loading={loading}
+              disabled={isMutating}
+              className="api-key-delete-confirm-btn"
+            >
+              {t('common.delete')}
+            </Button>
+          </div>
         </div>
       </Modal>
     </>

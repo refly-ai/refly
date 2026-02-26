@@ -77,6 +77,7 @@ import { DriveService } from '../drive/drive.service';
 import { CanvasSyncService } from '../canvas-sync/canvas-sync.service';
 import { normalizeCreditBilling } from '../../utils/credit-billing';
 import { SkillInvokeMetrics } from './skill-invoke.metrics';
+import { PtcPollerManager } from './ptc-poller.manager';
 
 @Injectable()
 export class SkillInvokerService {
@@ -424,7 +425,12 @@ export class SkillInvokerService {
       // Calculate PTC status based on user and toolsets
       const ptcConfig = getPtcConfig(this.config);
       const toolsetKeys = toolsets.map((t) => t.id);
-      const ptcEnabled = isPtcEnabledForToolsets(user, toolsetKeys, ptcConfig);
+      let ptcEnabled = isPtcEnabledForToolsets(user, toolsetKeys, ptcConfig);
+
+      // Debug mode: PTC enabled only if agent node title contains "ptc"
+      if (ptcConfig.debug) {
+        ptcEnabled = !!data.title && data.title.toLowerCase().includes('ptc');
+      }
 
       config.configurable.ptcEnabled = ptcEnabled;
 
@@ -947,6 +953,20 @@ export class SkillInvokerService {
     let _lastStepName: string | undefined;
     let _lastToolCallMeta: ToolCallMeta | undefined;
 
+    // PTC polling manager for execute_code tools
+    // Declared outside try block so finally can clean up even if early error occurs
+    const ptcPollerManager = new PtcPollerManager(
+      {
+        res,
+        resultId,
+        version,
+        messageAggregator,
+        getRunMeta: () => runMeta,
+      },
+      this.toolCallService,
+      this.logger,
+    );
+
     try {
       // Check if already aborted before starting execution (handles queued aborts)
       const isAlreadyAborted = await this.actionService.isAbortRequested(resultId, version);
@@ -1105,6 +1125,12 @@ export class SkillInvokerService {
                     },
                   });
                 }
+
+                // Start PTC polling for execute_code tool
+                if (toolName === 'execute_code' && res) {
+                  ptcPollerManager.start(toolCallId);
+                }
+
                 break;
               }
             }
@@ -1176,6 +1202,11 @@ export class SkillInvokerService {
                 toolCallStartTimes.delete(toolCallId);
               }
               this.metrics.tool.fail({ toolName, toolsetKey, error: errorMsg });
+
+              // Stop PTC polling for execute_code tool on error
+              if (toolName === 'execute_code' && res) {
+                await ptcPollerManager.stop(toolCallId);
+              }
 
               break;
             }
@@ -1271,6 +1302,11 @@ export class SkillInvokerService {
                 this.metrics.tool.fail({ toolName, toolsetKey, error: errorMessage || '' });
               } else {
                 this.metrics.tool.success({ toolName, toolsetKey });
+              }
+
+              // Stop PTC polling and send remaining events for execute_code tool
+              if (toolName === 'execute_code' && res) {
+                await ptcPollerManager.stop(toolCallId);
               }
 
               break;
@@ -1624,6 +1660,9 @@ export class SkillInvokerService {
         performCleanup();
       }
 
+      // Cleanup all PTC pollers
+      ptcPollerManager.cleanup();
+
       // Unregister the abort controller
       this.actionService.unregisterAbortController(resultId);
 
@@ -1670,6 +1709,7 @@ export class SkillInvokerService {
             // If status is failed, use result.errorType (which should always be set now), fallback to 'systemError'
             errorType: status === 'failed' ? result.errorType || 'systemError' : null,
             errors: JSON.stringify(result.errors),
+            ptcEnabled: config.configurable.ptcEnabled ?? false,
           },
         }),
       ]);
@@ -2472,7 +2512,12 @@ export class SkillInvokerService {
     version: number,
     canvasId: string,
   ): Promise<{
-    file: { fileId: string; internalUrl: string; mimeType: string; name: string };
+    file: {
+      fileId: string;
+      internalUrl: string;
+      mimeType: string;
+      name: string;
+    };
     toolCallCount: number;
   } | null> {
     try {

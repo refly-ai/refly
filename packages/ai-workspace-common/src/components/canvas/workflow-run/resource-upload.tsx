@@ -83,7 +83,7 @@ export const ResourceUpload: React.FC<ResourceUploadProps> = React.memo(
           disabled={disabled || uploading}
           maxCount={maxCount}
           itemRender={(_originNode, file) => (
-            <Spin className="w-full" spinning={uploading}>
+            <Spin className="w-full" spinning={file.status === 'uploading'}>
               <div className="w-full h-[37px] flex items-center justify-between gap-[10px] box-border px-3 border border-solid border-[#E5E5E5] rounded-xl hover:border-[#155EEF] transition-colors">
                 <div className="flex items-center gap-1 min-w-0 flex-1">
                   <ImageFileIcon />

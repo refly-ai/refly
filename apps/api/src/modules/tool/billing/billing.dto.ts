@@ -41,6 +41,26 @@ export interface ProcessBillingOptions {
   params?: Record<string, unknown>;
 
   /**
+   * Tool execution input data (for dynamic billing)
+   */
+  input?: Record<string, unknown>;
+
+  /**
+   * Tool execution output data (for dynamic billing)
+   */
+  output?: Record<string, unknown>;
+
+  /**
+   * Request schema as JSON string (for dynamic billing)
+   */
+  requestSchema?: string;
+
+  /**
+   * Response schema as JSON string (for dynamic billing)
+   */
+  responseSchema?: string;
+
+  /**
    * Result ID from context (optional, falls back to context if not provided)
    */
   resultId?: string;
@@ -49,6 +69,11 @@ export interface ProcessBillingOptions {
    * Result version from context (optional, falls back to context if not provided)
    */
   version?: number;
+
+  /**
+   * Tool call ID (for PTC mode, must be explicitly provided)
+   */
+  toolCallId?: string;
 }
 
 /**
@@ -57,10 +82,34 @@ export interface ProcessBillingOptions {
 export interface ProcessBillingResult {
   /** Whether billing was processed successfully */
   success: boolean;
-  /** Actual amount deducted (after discount) */
+  /** Effective cost for this call after discount (may be fractional) */
   discountedPrice: number;
   /** Original price before discount */
   originalPrice?: number;
+  /** Actual integer credits flushed/deducted this call (accumulator-based paths) */
+  flushedCredits?: number;
   /** Error message if processing failed */
   error?: string;
+}
+
+export interface ProviderBillingConfig {
+  providerKey: string;
+  plan: string;
+  standardRatePer1K: number;
+  premiumRatePer1K: number;
+  margin: number;
+}
+
+export interface ProcessComposioBillingOptions {
+  uid: string;
+  toolName: string;
+  toolsetKey: string;
+  /** Fractional credit cost (e.g., 0.036 for standard tier) */
+  fractionalCreditCost: number;
+  /** Original cost before any discount */
+  originalFractionalCost: number;
+  resultId?: string;
+  version?: number;
+  toolCallId?: string;
+  idempotencyKey?: string;
 }

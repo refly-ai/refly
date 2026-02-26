@@ -2351,6 +2351,10 @@ export const ActionMessageSchema = {
       $ref: '#/components/schemas/ToolCallResult',
       description: 'Tool call result',
     },
+    isPtc: {
+      type: 'boolean',
+      description: 'Whether this is a PTC (Programmatic Tool Calling) internal tool call',
+    },
     createdAt: {
       type: 'string',
       format: 'date-time',
@@ -4755,6 +4759,11 @@ export const SkillEventSchema = {
       description: 'Tool call result data.',
       $ref: '#/components/schemas/ToolCallResult',
     },
+    isPtc: {
+      type: 'boolean',
+      description:
+        'Whether this is a PTC (Programmatic Tool Calling) internal tool call. Only present when `event` is `tool_call_end` or `tool_call_error` for PTC internal calls.',
+    },
   },
 } as const;
 
@@ -6207,6 +6216,10 @@ export const SandboxExecuteContextSchema = {
     ptcEnabled: {
       type: 'boolean',
       description: 'Whether PTC (Programmatic Tool Calling) is enabled',
+    },
+    toolCallId: {
+      type: 'string',
+      description: "Tool call ID (execute_code's toolCallId) for PTC context tracking",
     },
     env: {
       type: 'object',
@@ -9041,6 +9054,20 @@ export const ToolCreationContextSchema = {
     creditCost: {
       type: 'number',
       description: 'Credit cost for tool execution',
+    },
+    creditBillingMap: {
+      type: 'object',
+      description: 'Per-action tier config for provider billing',
+      additionalProperties: {
+        type: 'object',
+        properties: {
+          tier: {
+            type: 'string',
+            enum: ['standard', 'premium'],
+          },
+        },
+        required: ['tier'],
+      },
     },
     toolsetType: {
       $ref: '#/components/schemas/GenericToolsetType',

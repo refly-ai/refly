@@ -2,7 +2,7 @@ import { memo, useState, lazy, Suspense } from 'react';
 import { Button, Tooltip } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@refly/utils/cn';
-import IntegrationIcon from '../../../assets/integration.svg';
+import { LuPuzzle } from 'react-icons/lu';
 
 const IntegrationDocsModal = lazy(() =>
   import('./integration-docs-modal').then((m) => ({
@@ -29,7 +29,7 @@ export const IntegrationDocsButton = memo(
             type={buttonType}
             className={cn('integration-docs-button', buttonClassName)}
           >
-            <img src={IntegrationIcon} alt="" className="integration-docs-button-icon" />
+            <LuPuzzle size={16} className="integration-docs-button-icon" />
             {t('integration.title')}
           </Button>
         </Tooltip>

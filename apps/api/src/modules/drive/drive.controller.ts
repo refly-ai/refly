@@ -283,6 +283,11 @@ export class DriveController {
       'Content-Type': contentType,
       'Content-Length': String(data.length),
       ...corsHeaders,
+      ...(contentType === 'text/html'
+        ? {
+            'Content-Security-Policy': "script-src 'self' *;",
+          }
+        : {}),
       ...(download
         ? {
             'Content-Disposition': buildContentDisposition(resolvedFilename),

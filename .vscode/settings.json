@@ -5,6 +5,9 @@
   },
   "files.eol": "\n",
   "editor.formatOnSave": true,
+  "[markdown]": {
+    "editor.formatOnSave": false
+  },
   "typescript.preferences.importModuleSpecifier": "non-relative",
   "tailwindCSS.includeLanguages": {
     "typescript": "tsx",

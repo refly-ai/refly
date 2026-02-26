@@ -9,7 +9,7 @@ import { ComposioService } from './composio/composio.service';
 import { CreditService } from '../credit/credit.service';
 import { ToolFactory } from './dynamic-tooling/factory.service';
 import { ToolInventoryService } from './inventory/inventory.service';
-import { ToolWrapperFactoryService } from './tool-execution/wrapper/wrapper.service';
+import { ToolWrapperFactoryService } from './handlers/core/wrapper.service';
 import type { User } from '@refly/openapi-schema';
 
 describe('ToolService', () => {

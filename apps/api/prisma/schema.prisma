@@ -178,6 +178,8 @@ model ActionResult {
   actualProviderItemId    String?      @map("actual_provider_item_id")
   /// Whether this action used auto model routing
   isAutoModelRouted       Boolean      @default(false) @map("is_auto_model_routed")
+  /// Whether PTC (Programmatic Tool Calling) was enabled for this run
+  ptcEnabled              Boolean      @default(false) @map("ptc_enabled")
   /// Copilot session id
   copilotSessionId        String?      @map("copilot_session_id")
   /// Workflow execution id
@@ -1765,6 +1767,67 @@ model ToolsetInventory {
   @@map("toolset_inventory")
 }
 
+model ToolBilling {
+  /// Primary key
+  pk           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Inventory key (e.g., 'nano_banana_pro', 'fal_image')
+  inventoryKey String   @map("inventory_key")
+  /// Method name (e.g., 'generate', 'text_to_image')
+  methodName   String   @map("method_name")
+  /// Billing rules (array of AdditiveBillingRule or MultiplierBillingRule)
+  billingRules Json     @map("billing_rules")
+  /// Token pricing for USD-based billing (optional)
+  tokenPricing Json?    @map("token_pricing")
+  /// Whether this billing config is enabled
+  enabled      Boolean  @default(true)
+  /// Create timestamp
+  createdAt    DateTime @default(now()) @map("created_at")
+  /// Update timestamp
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@unique([inventoryKey, methodName])
+  // Partial index (WHERE enabled = true) is managed via manual SQL migration.
+  @@map("tool_billing")
+}
+
+model ToolProviderBilling {
+  /// Primary key
+  pk                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Provider key (e.g., composio)
+  providerKey       String   @map("provider_key")
+  /// Billing plan key (e.g., ridiculously_cheap)
+  plan              String   @map("plan")
+  /// Standard tier rate per 1K calls in USD
+  standardRatePer1K Decimal  @map("standard_rate_per_1k") @db.Decimal(12, 6)
+  /// Premium tier rate per 1K calls in USD
+  premiumRatePer1K  Decimal  @map("premium_rate_per_1k") @db.Decimal(12, 6)
+  /// Margin multiplier
+  margin            Decimal  @default(1.0) @map("margin") @db.Decimal(12, 6)
+  /// Whether this plan is currently active
+  active            Boolean  @default(true) @map("active")
+  /// Create timestamp
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  /// Update timestamp
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@unique([providerKey, plan])
+  // Partial index (WHERE active = true) is managed via manual SQL migration.
+  @@map("tool_provider_billing")
+}
+
+model CreditAccumulatorSnapshot {
+  /// User ID (one accumulator per user)
+  uid                   String   @id
+  /// Remainder in micro-credits (1 credit = 1,000,000 micro-credits)
+  remainderMicroCredits BigInt   @default(0) @map("remainder_micro_credits")
+  /// Last time the snapshot was synced from Redis
+  lastSyncedAt          DateTime @default(now()) @map("last_synced_at")
+  /// Update timestamp
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@map("credit_accumulator_snapshot")
+}
+
 model ComposioConnection {
   /// Primary key
   pk                 BigInt    @id @default(autoincrement())
@@ -1818,6 +1881,10 @@ model ToolCallResult {
   status    String    @default("executing") @map("status")
   /// Error message
   error     String?   @map("error")
+  /// Call type: agent (standard), ptc (sandbox), standalone (direct API)
+  type      String    @default("agent") @map("type")
+  /// PTC parent call ID (links to execute_code's callId, only for type='ptc')
+  ptcCallId String?   @map("ptc_call_id")
   /// Create timestamp
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
   /// Update timestamp
@@ -1828,6 +1895,8 @@ model ToolCallResult {
   @@index([resultId, version])
   @@index([toolsetId, deletedAt])
   @@index([toolName, deletedAt])
+  @@index([ptcCallId, type, deletedAt])
+  @@index([resultId, version, type])
   @@map("tool_call_results")
 }
 

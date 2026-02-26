@@ -3,7 +3,13 @@ import type { IContextItem } from '@refly/common-types';
 import { cn } from '@refly/utils/cn';
 import { NodeIcon } from '@refly-packages/ai-workspace-common/components/canvas/nodes/shared/node-icon';
 import { serverOrigin } from '@refly/ui-kit';
-import { isImageFile, isDocumentFile, formatFileSize, getFileExtension } from './file-utils';
+import {
+  isImageFile,
+  isDocumentFile,
+  isAudioVideoFile,
+  formatFileSize,
+  getFileExtension,
+} from './file-utils';
 import { useCanvasResourcesPanelStoreShallow } from '@refly/stores';
 import type { DriveFile } from '@refly/openapi-schema';
 
@@ -19,6 +25,26 @@ const ChevronRightIcon = ({ size = 14, className }: { size?: number; className?:
   >
     <path
       d="M5.25 3.5L8.75 7L5.25 10.5"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+// ChevronLeft icon component
+const ChevronLeftIcon = ({ size = 14, className }: { size?: number; className?: string }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 14 14"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <path
+      d="M8.75 3.5L5.25 7L8.75 10.5"
       stroke="currentColor"
       strokeWidth="1.5"
       strokeLinecap="round"
@@ -158,16 +184,19 @@ export const MessageFileList = memo(
   ({ contextItems, canvasId, className }: MessageFileListProps) => {
     const scrollRef = useRef<HTMLDivElement>(null);
     const [showRightArrow, setShowRightArrow] = useState(false);
+    const [showLeftArrow, setShowLeftArrow] = useState(false);
 
     const fileItems = contextItems.filter((item) => item.type === 'file');
 
-    // Check if right arrow should be shown
+    // Check if arrows should be shown
     const checkScroll = useCallback(() => {
       const el = scrollRef.current;
       if (!el) return;
       const hasOverflow = el.scrollWidth > el.clientWidth;
       const notAtEnd = el.scrollLeft < el.scrollWidth - el.clientWidth - 10;
+      const notAtStart = el.scrollLeft > 10;
       setShowRightArrow(hasOverflow && notAtEnd);
+      setShowLeftArrow(hasOverflow && notAtStart);
     }, []);
 
     useEffect(() => {
@@ -187,8 +216,31 @@ export const MessageFileList = memo(
       scrollRef.current?.scrollBy({ left: 200, behavior: 'smooth' });
     };
 
+    const handleScrollLeft = () => {
+      scrollRef.current?.scrollBy({ left: -200, behavior: 'smooth' });
+    };
+
     return (
       <div className={cn('relative', className)}>
+        {/* Left gradient mask + circular arrow button */}
+        {showLeftArrow && (
+          <div
+            className="absolute left-0 top-0 h-full flex items-center justify-start pointer-events-none z-10"
+            style={{
+              width: '40px',
+              background:
+                'linear-gradient(90deg, rgba(255, 255, 255, 1) 58%, rgba(255, 255, 255, 0) 100%)',
+            }}
+          >
+            <div
+              className="w-6 h-6 rounded-full flex items-center justify-center bg-white cursor-pointer pointer-events-auto ml-1 shadow-sm border border-gray-200"
+              onClick={handleScrollLeft}
+            >
+              <ChevronLeftIcon size={14} className="text-gray-700" />
+            </div>
+          </div>
+        )}
+
         {/* Scrollable container - gap 8px per Figma */}
         <div ref={scrollRef} className="flex gap-2 overflow-x-auto scrollbar-hide">
           {fileItems.map((item) => {
@@ -199,11 +251,13 @@ export const MessageFileList = memo(
               !!item.metadata?.previewUrl ||
               !!item.metadata?.url ||
               (!!item.entityId && !item.entityId.startsWith('pending_'));
-            // Show as image when: clearly image, or we have a content URL and it's not clearly a document
+            // Show as image when: clearly image, or we have a content URL and it's not clearly a document or audio/video
             // (handles cases where API omits mimeType or filename has no extension)
             const isImage =
               isImageFile(mimeType, extension) ||
-              (hasPreviewUrl && !isDocumentFile(mimeType, extension));
+              (hasPreviewUrl &&
+                !isDocumentFile(mimeType, extension) &&
+                !isAudioVideoFile(mimeType, extension));
 
             return isImage ? (
               <ImageThumbnail key={item.entityId} item={item} canvasId={canvasId} />
@@ -216,7 +270,7 @@ export const MessageFileList = memo(
         {/* Right gradient mask + circular arrow button - per Figma specs */}
         {showRightArrow && (
           <div
-            className="absolute right-0 top-0 h-full flex items-center justify-end pointer-events-none"
+            className="absolute right-0 top-0 h-full flex items-center justify-end pointer-events-none z-10"
             style={{
               width: '40px',
               background:

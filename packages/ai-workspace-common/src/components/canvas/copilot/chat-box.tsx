@@ -42,6 +42,7 @@ export const ChatBox = memo(
       completedFileItems,
       relevantUploads,
       handleFileUpload,
+      handleBatchFileUpload,
       handleRetryFile,
       handleRemoveFile,
       clearFiles,
@@ -122,11 +123,9 @@ export const ChatBox = memo(
     // Register file upload handler for drag-and-drop from parent
     useEffect(() => {
       if (onRegisterFileUploadHandler) {
-        onRegisterFileUploadHandler(async (files: File[]) => {
-          await Promise.all(files.map((file) => handleFileUpload(file)));
-        });
+        onRegisterFileUploadHandler(handleBatchFileUpload);
       }
-    }, [onRegisterFileUploadHandler, handleFileUpload]);
+    }, [onRegisterFileUploadHandler, handleBatchFileUpload]);
 
     const handleSendMessage = useCallback(
       async (type: 'input_enter_send' | 'button_click_send', customQuery?: string) => {
@@ -204,7 +203,9 @@ export const ChatBox = memo(
     );
 
     useEffect(() => {
-      if (pendingPrompt && !initialPromptProcessed.current) {
+      // Allow sending if there's a non-empty prompt OR pending files
+      const hasPendingContent = !!pendingPrompt?.trim() || (pendingFiles?.length ?? 0) > 0;
+      if (hasPendingContent && !initialPromptProcessed.current) {
         initialPromptProcessed.current = true;
 
         const filesToSend = pendingFiles ?? [];
@@ -223,7 +224,7 @@ export const ChatBox = memo(
 
         invokeAction(
           {
-            query: pendingPrompt,
+            query: pendingPrompt || '',
             resultId,
             modelInfo: null,
             agentMode: 'copilot_agent',
@@ -291,7 +292,7 @@ export const ChatBox = memo(
 
     return (
       <div
-        className="w-full p-3 rounded-xl overflow-hidden border-[0.5px] border-solid border-[rgba(0,0,0,0.1)] bg-[rgba(255,255,255,0.9)]"
+        className="w-full p-3 rounded-xl overflow-hidden border-[0.5px] border-solid border-refly-Card-Border bg-refly-bg-content-z2"
         style={{
           boxShadow: '0px 5px 30px 0px rgba(31,35,41,0.05), 0px 0px 2px 0px rgba(31,35,41,0.04)',
         }}
@@ -319,10 +320,7 @@ export const ChatBox = memo(
           handleSendMessage={() => handleSendMessage('input_enter_send')}
           placeholder={t('copilot.placeholder')}
           onUploadImage={handleFileUpload}
-          onUploadMultipleImages={async (files) => {
-            // Upload files in parallel
-            await Promise.all(files.map((file) => handleFileUpload(file)));
-          }}
+          onUploadMultipleImages={handleBatchFileUpload}
         />
 
         {/* Bottom action bar */}
@@ -331,7 +329,8 @@ export const ChatBox = memo(
           fileCount={fileCount}
           maxFileCount={MAX_FILE_COUNT}
           isExecuting={isExecuting}
-          onUploadFile={handleFileUpload}
+          isUploading={hasUploadingFiles}
+          onUploadFiles={handleBatchFileUpload}
           onSendMessage={() => handleSendMessage('button_click_send')}
           onAbort={handleAbort}
         />

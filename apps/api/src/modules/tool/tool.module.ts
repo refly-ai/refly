@@ -13,25 +13,21 @@ import { KnowledgeModule } from '../knowledge/knowledge.module';
 import { McpServerModule } from '../mcp-server/mcp-server.module';
 import { MiscModule } from '../misc/misc.module';
 import { ProviderModule } from '../provider/provider.module';
+import { ToolCallModule } from '../tool-call/tool-call.module';
 import { BillingModule } from './billing/billing.module';
 import { ComposioModule } from './composio/composio.module';
-import { AdapterFactory } from './dynamic-tooling/adapters/factory';
+import { AdapterFactory } from './dynamic-tooling/adapters/adapter-factory.service';
 import { ToolFactory } from './dynamic-tooling/factory.service';
+import { HandlersModule } from './handlers/handlers.module';
 import { ToolInventoryService } from './inventory/inventory.service';
-import { ResourceHandler } from './resource.service';
-import { ScaleboxModule } from './sandbox/scalebox.module';
 import {
-  ComposioToolPostHandlerService,
-  RegularToolPostHandlerService,
-  ToolWrapperFactoryService,
-} from './tool-execution';
-import {
+  PtcEnvService,
+  PtcSdkService,
+  ToolDefinitionService,
   ToolExecutionService,
   ToolIdentifyService,
-  ToolDefinitionService,
-  PtcSdkService,
-  PtcEnvService,
 } from './ptc';
+import { ScaleboxModule } from './sandbox/scalebox.module';
 import { ToolController } from './tool.controller';
 import { ToolService } from './tool.service';
 
@@ -49,7 +45,9 @@ import { ToolService } from './tool.service';
     ProviderModule,
     CreditModule,
     BillingModule,
+    HandlersModule,
     ScaleboxModule,
+    ToolCallModule,
     ...(isDesktop() ? [] : [BullModule.registerQueue({ name: QUEUE_SYNC_TOOL_CREDIT_USAGE })]),
   ],
   controllers: [ToolController],
@@ -72,12 +70,8 @@ import { ToolService } from './tool.service';
     // Tool factory for creating dynamic tools from inventory
     ToolFactory,
     AdapterFactory,
-    // Resource handler for input/output resource preprocessing
-    ResourceHandler,
-    // Post-handler and wrapper factory for tool result processing
-    RegularToolPostHandlerService,
-    ComposioToolPostHandlerService,
-    ToolWrapperFactoryService,
+    // ResourceHandler now provided by HandlersModule
+    // All handler services are now provided by HandlersModule
   ],
   exports: [ToolService, ToolInventoryService, ToolFactory, PtcSdkService, PtcEnvService],
 })

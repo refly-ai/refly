@@ -20,7 +20,6 @@ import { AudioRenderer } from './audio';
 import { UnsupportedRenderer } from './unsupported';
 import { HtmlRenderer } from './html';
 import { MarkdownRenderer } from './markdown';
-import { FilePreviewModal } from './file-preview-modal';
 import { logEvent } from '@refly/telemetry-web';
 import { useLastRunTabContext } from '@refly-packages/ai-workspace-common/context/run-location';
 
@@ -96,7 +95,6 @@ export const FilePreview = memo(
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'code' | 'preview'>('preview');
-    const [isPreviewModalVisible, setIsPreviewModalVisible] = useState(false);
 
     const { location } = useLastRunTabContext();
 
@@ -191,16 +189,12 @@ export const FilePreview = memo(
     }, []);
 
     const handleClickPreview = useCallback(() => {
-      logEvent('artifact_view', Date.now(), {
-        artifact_type: file.category,
-        artifact_location: location,
-      });
-
       if (onPreview) {
+        logEvent('artifact_view', Date.now(), {
+          artifact_type: file.category,
+          artifact_location: location,
+        });
         onPreview();
-      } else {
-        // Use built-in modal if no custom onPreview handler
-        setIsPreviewModalVisible(true);
       }
     }, [file, onPreview, location]);
 
@@ -312,41 +306,25 @@ export const FilePreview = memo(
       return !type?.startsWith('video/') && !type?.startsWith('audio/');
     }, [file.type, loading, error, fileContent]);
 
-    const handleCloseModal = useCallback(() => {
-      setIsPreviewModalVisible(false);
-    }, []);
-
     return (
-      <>
-        <div
-          className={cn('flex-1 overflow-hidden relative group', {
-            'h-full': !isVideo,
-            'max-h-[230px]': source === 'card' && !isVideo,
-          })}
-        >
-          {canPreview && source === 'card' && (
-            <div className="absolute z-10 bottom-0 left-0 right-0 top-0 rounded-[10px] bg-refly-modal-mask flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-in-out">
-              <div
-                className="p-3 rounded-[80px] bg-refly-text-2 text-sm leading-5 font-semibold text-refly-text-flip cursor-pointer select-none"
-                onClick={handleClickPreview}
-              >
-                {t('common.view')}
-              </div>
+      <div
+        className={cn('flex-1 overflow-hidden relative group', {
+          'h-full': !isVideo,
+          'max-h-[230px]': source === 'card' && !isVideo,
+        })}
+      >
+        {canPreview && source === 'card' && onPreview && (
+          <div className="absolute z-10 bottom-0 left-0 right-0 top-0 rounded-[10px] bg-refly-modal-mask flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-in-out">
+            <div
+              className="p-3 rounded-[80px] bg-refly-text-2 text-sm leading-5 font-semibold text-refly-text-flip cursor-pointer select-none"
+              onClick={handleClickPreview}
+            >
+              {t('common.view')}
             </div>
-          )}
-          {renderFilePreview()}
-        </div>
-
-        {/* File Preview Modal */}
-        {!onPreview && (
-          <FilePreviewModal
-            visible={isPreviewModalVisible}
-            onClose={handleCloseModal}
-            file={file}
-            fileContent={fileContent}
-          />
+          </div>
         )}
-      </>
+        {renderFilePreview()}
+      </div>
     );
   },
 );

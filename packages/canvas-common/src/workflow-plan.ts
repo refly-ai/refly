@@ -44,6 +44,7 @@ export const workflowVariableValueSchema = z.object({
   text: z.string().optional().describe('Text value (for text type)'),
   resource: z
     .object({
+      fileId: z.string().optional().describe('File ID from uploaded context files'),
       name: z.string().describe('Resource file name'),
       fileType: z.enum(['document', 'image', 'audio', 'video']).describe('Resource file type'),
     })
@@ -78,7 +79,7 @@ export const workflowVariableSchema = z.object({
     .boolean()
     .optional()
     .describe(
-      'Whether only single selection is allowed (only for option type variables). Defaults to true.',
+      'For option type: whether only single selection is allowed. For resource type: whether only single file is accepted (false for multiple files). Defaults to true.',
     ),
   value: z.array(workflowVariableValueSchema).describe('Variable values'),
 });
@@ -299,6 +300,7 @@ export const applyWorkflowPatchOperations = (
         }
         const existingVar = plan.variables![varIndex];
         if (data) {
+          const typedData = data as unknown as Partial<z.infer<typeof workflowPatchDataSchema>>;
           const updatedVar = {
             ...existingVar,
             ...(data.variableType !== undefined && {
@@ -312,8 +314,8 @@ export const applyWorkflowPatchOperations = (
             ...(data.resourceTypes !== undefined && {
               resourceTypes: data.resourceTypes,
             }),
-            ...(data.options !== undefined && { options: data.options }),
-            ...(data.isSingle !== undefined && { isSingle: data.isSingle }),
+            ...(typedData.options !== undefined && { options: typedData.options }),
+            ...(typedData.isSingle !== undefined && { isSingle: typedData.isSingle }),
             ...(data.value !== undefined && { value: data.value }),
           };
           // Validate the updated variable
@@ -434,6 +436,7 @@ interface PlanVariableInput {
     type?: 'text' | 'resource' | string;
     text?: string;
     resource?: {
+      fileId?: string;
       name?: string;
       fileType?: 'document' | 'image' | 'video' | 'audio' | string;
     };
@@ -442,6 +445,8 @@ interface PlanVariableInput {
   variableType?: 'string' | 'option' | 'resource' | string;
   required?: boolean;
   resourceTypes?: Array<'document' | 'image' | 'video' | 'audio'>;
+  options?: string[];
+  isSingle?: boolean;
 }
 
 export const planVariableToWorkflowVariable = (
@@ -464,6 +469,7 @@ export const planVariableToWorkflowVariable = (
         ...(value?.resource?.name && value?.resource?.fileType
           ? {
               resource: {
+                ...(value.resource.fileId ? { fileId: value.resource.fileId } : {}),
                 name: value.resource.name,
                 fileType: value.resource.fileType as 'document' | 'image' | 'video' | 'audio',
               },

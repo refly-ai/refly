@@ -11,11 +11,15 @@ import type {
 } from '@refly/openapi-schema';
 import axios, { AxiosResponse } from 'axios';
 import { supportedMimeTypes } from 'file-type';
-import { AdapterType, HttpMethod, AdapterError } from '../../constant/constant';
-import { BaseAdapter, type IHttpAdapter } from '../core/adapter';
-import { HttpClient } from './http-client';
+import { AdapterError, AdapterType, HttpMethod } from '../../constant/constant';
 import { getToolName, getToolsetKey } from '../../tool-context';
-import { isVolcengineAuth, VolcenginePollingHelper, applyVolcengineSigning } from './volcengine';
+import { BaseAdapter, type IHttpAdapter } from './adapter';
+import { HttpClient } from './http-client';
+import {
+  applyVolcengineSigning,
+  isVolcengineAuth,
+  VolcenginePollingHelper,
+} from './providers/volcengine.helper';
 
 /**
  * HTTP adapter for making HTTP API calls with intelligent polling support

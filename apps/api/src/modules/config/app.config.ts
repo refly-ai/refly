@@ -104,7 +104,7 @@ export default () => ({
     redirectUrl: process.env.LOGIN_REDIRECT_URL,
     cookie: {
       domain: process.env.REFLY_COOKIE_DOMAIN,
-      secure: process.env.REFLY_COOKIE_SECURE,
+      secure: process.env.REFLY_COOKIE_SECURE === 'true' || false,
       sameSite: process.env.REFLY_COOKIE_SAME_SITE,
     },
     jwt: {
@@ -256,6 +256,7 @@ export default () => ({
   },
   ptc: {
     mode: process.env.PTC_MODE || 'off',
+    debug: process.env.PTC_DEBUG || '',
     userAllowlist: process.env.PTC_USER_ALLOWLIST || '',
     toolsetAllowlist: process.env.PTC_TOOLSET_ALLOWLIST || '',
     toolsetBlocklist: process.env.PTC_TOOLSET_BLOCKLIST || '',

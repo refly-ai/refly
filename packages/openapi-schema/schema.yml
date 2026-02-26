@@ -6400,6 +6400,9 @@ components:
         toolCallResult:
           $ref: "#/components/schemas/ToolCallResult"
           description: Tool call result
+        isPtc:
+          type: boolean
+          description: Whether this is a PTC (Programmatic Tool Calling) internal tool call
         createdAt:
           type: string
           format: date-time
@@ -8124,6 +8127,9 @@ components:
         toolCallResult:
           description: Tool call result data.
           $ref: "#/components/schemas/ToolCallResult"
+        isPtc:
+          type: boolean
+          description: Whether this is a PTC (Programmatic Tool Calling) internal tool call. Only present when `event` is `tool_call_end` or `tool_call_error` for PTC internal calls.
     ToolCallStatus:
       type: string
       description: Tool call status
@@ -9176,6 +9182,9 @@ components:
         ptcEnabled:
           type: boolean
           description: Whether PTC (Programmatic Tool Calling) is enabled
+        toolCallId:
+          type: string
+          description: Tool call ID (execute_code's toolCallId) for PTC context tracking
         env:
           type: object
           additionalProperties:
@@ -11146,6 +11155,16 @@ components:
         creditCost:
           type: number
           description: Credit cost for tool execution
+        creditBillingMap:
+          type: object
+          description: Per-action tier config for provider billing
+          additionalProperties:
+            type: object
+            properties:
+              tier:
+                type: string
+                enum: [standard, premium]
+            required: [tier]
         toolsetType:
           $ref: "#/components/schemas/GenericToolsetType"
           description: Toolset type identifier

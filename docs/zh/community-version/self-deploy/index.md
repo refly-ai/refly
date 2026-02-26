@@ -51,6 +51,10 @@ RESEND_API_KEY=your_resend_api_key
 TOOLSET_FAL_API_KEY=your_fal_api_key
 ```
 
+#### 2.3. FAQ：通过 IP 地址访问 {#faq-ip-access-section}
+
+如果您在云服务器上部署并通过 IP 地址访问，请参考[FAQ：通过 IP 地址访问](./faq-ip-access.md)来设置环境变量。
+
 ### 3. 通过 docker compose 启动应用 {#start-the-application-via-docker-compose}
 
 ```bash
