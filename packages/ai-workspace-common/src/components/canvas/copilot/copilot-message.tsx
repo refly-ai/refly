@@ -197,7 +197,7 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
     if (isPatchOperation && finalPlan.patchOperations?.length) {
       const currentEdges = getEdges() as CanvasEdge[];
 
-      const { nodes, edges, affectedNodeIds, variableOperations } = applyIncrementalChangesToCanvas(
+      const { nodes, edges, affectedNodeIds } = applyIncrementalChangesToCanvas(
         finalPlan.patchOperations,
         currentNodes,
         currentEdges,
@@ -209,11 +209,8 @@ export const CopilotMessage = memo(({ result, isFinal, sessionId }: CopilotMessa
       setEdges(edges);
 
       // Handle variable operations
-      if (variableOperations?.length) {
-        // For now, we'll handle this by setting all variables including updates
-        // The setVariables function will merge with existing variables
-        const existingVariables = finalPlan.variables ?? [];
-        setVariables(existingVariables, { archiveOldFiles: false });
+      if (finalPlan.variables?.length) {
+        setVariables(finalPlan.variables, { archiveOldFiles: false });
       }
 
       setShowWorkflowRun(true);

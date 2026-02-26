@@ -3601,15 +3601,6 @@ const translations = {
       cancel: '取消',
     },
     abortSuccess: '已停止执行',
-    nodeEdit: {
-      editing: '编辑节点',
-      untitled: '未命名',
-      modifyNode: '修改',
-      extendFromNode: '扩展',
-      modifyDescription: '直接编辑此节点',
-      extendDescription: '在此节点后添加新节点',
-      clearSelection: '取消选中',
-    },
     fileLimit: {
       reached: '已达到文件数量上限（10个）',
       someSkipped: '因数量限制跳过 {{skipped}} 个文件',

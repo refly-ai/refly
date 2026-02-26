@@ -1,37 +1,10 @@
-import { CopilotSession, CanvasNodeType } from '@refly/openapi-schema';
+import { CopilotSession, NodeEditContext } from '@refly/openapi-schema';
 import type { IContextItem } from '@refly/common-types';
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 
-/**
- * Context for targeted node editing in Copilot.
- * When a user selects a node on the canvas, this context captures
- * the relevant information to enable Copilot to perform targeted edits.
- */
-export interface NodeEditContext {
-  /** The internal node ID from ReactFlow */
-  nodeId: string;
-  /** The entity ID used for referencing in workflows */
-  entityId: string;
-  /** The task ID from workflow plan, used for patch operations */
-  taskId: string;
-  /** The type of the selected node */
-  nodeType: CanvasNodeType;
-  /** Current state of the node that can be edited */
-  currentState: {
-    query?: string;
-    toolsets?: string[];
-    title?: string;
-  };
-  /** Graph context showing upstream and downstream dependencies */
-  graphContext: {
-    upstreamTaskIds: string[];
-    downstreamTaskIds: string[];
-  };
-  /** The edit mode: modify the current node or extend from it */
-  editMode: 'modify' | 'extend';
-}
+export type { NodeEditContext };
 
 interface CopilotState {
   // state

@@ -717,12 +717,14 @@ export const applyIncrementalChangesToCanvas = (
   const taskIdToEntityId = new Map<string, string>();
 
   for (const node of currentNodes) {
-    const metadata = (node.data as any)?.metadata;
-    const taskId = metadata?.taskId;
+    const metadata = node.data?.metadata;
+    const taskId = metadata?.taskId as string | undefined;
     if (taskId) {
       taskIdToNode.set(taskId, node);
       taskIdToNodeId.set(taskId, node.id);
-      taskIdToEntityId.set(taskId, (node.data as any)?.entityId);
+      if (node.data?.entityId) {
+        taskIdToEntityId.set(taskId, node.data.entityId);
+      }
     }
   }
 

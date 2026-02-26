@@ -44,6 +44,9 @@ import {
   WorkflowPlan,
   WorkflowPlanRecord,
   WorkflowPatchOperation,
+  CanvasNode,
+  CanvasEdge,
+  WorkflowVariable,
 } from '@refly/openapi-schema';
 import { Document as LangChainDocument } from '@langchain/core/documents';
 
@@ -202,5 +205,10 @@ export interface ReflyService {
   getCanvasData: (
     user: User,
     params: { canvasId: string },
-  ) => Promise<{ title: string; nodes: any[]; edges: any[]; variables?: any[] }>;
+  ) => Promise<{
+    title: string;
+    nodes: CanvasNode[];
+    edges: CanvasEdge[];
+    variables?: WorkflowVariable[];
+  }>;
 }
