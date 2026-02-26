@@ -140,6 +140,12 @@ def make_arg_parser(description):
         help="Action result ID (ar-... or sk-...) or canvas ID (c-...)",
     )
     parser.add_argument(
+        "title",
+        nargs="?",
+        default=None,
+        help="Optional title (exact match) to select a specific result within the canvas (only used with c-... IDs)",
+    )
+    parser.add_argument(
         "--full", action="store_true", help="Show full details without truncation"
     )
     return parser
@@ -156,9 +162,14 @@ def connect_db():
     return psycopg2.connect(db_url)
 
 
-def resolve_result(cur, id_arg):
+def resolve_result(cur, id_arg, title=None):
     """
-    Resolve canvas ID or result ID to the latest action_result row.
+    Resolve canvas ID or result ID to an action_result row.
+
+    - canvas ID (c-...) + title: exact match on title within that canvas
+    - canvas ID (c-...): latest result for that canvas
+    - result ID (ar-... / sk-...): latest version of that result
+
     Returns (result_id, version, type, model_name, status, title, input, created_at) or exits.
     """
     is_canvas = id_arg.startswith("c-")
@@ -171,7 +182,17 @@ def resolve_result(cur, id_arg):
         )
         sys.exit(1)
 
-    if is_canvas:
+    if is_canvas and title:
+        cur.execute(
+            """
+            SELECT result_id, version, type, model_name, status, title, input, created_at
+            FROM refly.action_results
+            WHERE target_id = %s AND title = %s
+            ORDER BY created_at DESC LIMIT 1
+            """,
+            (id_arg, title),
+        )
+    elif is_canvas:
         cur.execute(
             """
             SELECT result_id, version, type, model_name, status, title, input, created_at
@@ -194,8 +215,11 @@ def resolve_result(cur, id_arg):
 
     row = cur.fetchone()
     if not row:
-        label = "canvas_id" if is_canvas else "result_id"
-        print(f"No result found for {label}={id_arg}", file=sys.stderr)
+        if is_canvas and title:
+            print(f"No result found for canvas_id={id_arg} with title={title!r}", file=sys.stderr)
+        else:
+            label = "canvas_id" if is_canvas else "result_id"
+            print(f"No result found for {label}={id_arg}", file=sys.stderr)
         sys.exit(1)
     return row
 

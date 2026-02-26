@@ -22,7 +22,10 @@ DIVIDER = "  " + "─" * 58
 
 # ── Section [2]: BILLING TIMELINE ─────────────────────────────────────────────
 
-def print_billing_timeline(agent_calls, ptc_by_parent, raw, agent_count, ptc_count, warnings):
+
+def print_billing_timeline(
+    agent_calls, ptc_by_parent, raw, agent_count, ptc_count, warnings
+):
     warn_ids = {w["call_id"] for w in warnings}
     all_agent_ids = {ac["call_id"] for ac in agent_calls}
 
@@ -38,18 +41,33 @@ def print_billing_timeline(agent_calls, ptc_by_parent, raw, agent_count, ptc_cou
     # Orphan PTC calls
     orphan_ptc = [
         {
-            "call_id": call_id, "tool_name": tool_name, "status": status,
-            "created_at": created_at, "toolset_id": toolset_id,
-            "credits_charged": credits_charged or 0, "original_price": original_price or 0,
+            "call_id": call_id,
+            "tool_name": tool_name,
+            "status": status,
+            "created_at": created_at,
+            "toolset_id": toolset_id,
+            "credits_charged": credits_charged or 0,
+            "original_price": original_price or 0,
             "billing_toolset_key": billing_toolset_key,
-            "is_non_billable": False, "duration": None,
+            "is_non_billable": False,
+            "duration": None,
         }
         for (
-            call_id, tool_name, tc_type, status, created_at, updated_at,
-            ptc_call_id, toolset_id, credits_charged, original_price, billing_toolset_key,
+            call_id,
+            tool_name,
+            tc_type,
+            status,
+            created_at,
+            updated_at,
+            ptc_call_id,
+            toolset_id,
+            credits_charged,
+            original_price,
+            billing_toolset_key,
         ) in raw
         if ((tc_type == "ptc") if tc_type else call_id.startswith("ptc:"))
-        and ptc_call_id and ptc_call_id not in all_agent_ids
+        and ptc_call_id
+        and ptc_call_id not in all_agent_ids
     ]
     if orphan_ptc:
         print(f"  [Orphan PTC — parent not found] ({len(orphan_ptc)})")
@@ -60,7 +78,20 @@ def print_billing_timeline(agent_calls, ptc_by_parent, raw, agent_count, ptc_cou
 
 # ── Section [3]: CHECKS (includes billing warnings) ───────────────────────────
 
-def print_checks(cur, r_id, r_ver, r_uid, r_created, ptc_enabled, agent_calls, ptc_by_parent, ptc_count, warnings, full=False):
+
+def print_checks(
+    cur,
+    r_id,
+    r_ver,
+    r_uid,
+    r_created,
+    ptc_enabled,
+    agent_calls,
+    ptc_by_parent,
+    ptc_count,
+    warnings,
+    full=False,
+):
     print("[3] CHECKS")
     print()
     issues = []
@@ -118,7 +149,9 @@ def print_checks(cur, r_id, r_ver, r_uid, r_created, ptc_enabled, agent_calls, p
                     f"(created: {fmt_time(key_created)}, expires: {fmt_datetime(expires_at)})"
                 )
             else:
-                print("    ⚠ no temp API key found near run time  ← sandbox may not have authenticated")
+                print(
+                    "    ⚠ no temp API key found near run time  ← sandbox may not have authenticated"
+                )
                 issues.append("no temp API key found")
         else:
             print("    — user_api_keys table not found")
@@ -135,10 +168,14 @@ def print_checks(cur, r_id, r_ver, r_uid, r_created, ptc_enabled, agent_calls, p
     if ptc_count == 0:
         print("    — no PTC tool calls recorded")
     elif orphan_count == 0:
-        print(f"    ✓ ptc_call_id linkage: {ptc_count}/{ptc_count} PTC calls linked to valid parent")
+        print(
+            f"    ✓ ptc_call_id linkage: {ptc_count}/{ptc_count} PTC calls linked to valid parent"
+        )
     else:
         linked = ptc_count - orphan_count
-        print(f"    ⚠ ptc_call_id linkage: {linked}/{ptc_count} linked  ({orphan_count} orphan{'s' if orphan_count > 1 else ''})")
+        print(
+            f"    ⚠ ptc_call_id linkage: {linked}/{ptc_count} linked  ({orphan_count} orphan{'s' if orphan_count > 1 else ''})"
+        )
         issues.append(f"{orphan_count} orphan PTC call(s)")
     print()
 
@@ -161,29 +198,41 @@ def print_checks(cur, r_id, r_ver, r_uid, r_created, ptc_enabled, agent_calls, p
         if total_billed == 0:
             print("    — no tool_call billing records")
         elif total_billed == matched:
-            print(f"    ✓ tool_call_id linkage: {matched}/{total_billed} billed calls matched")
+            print(
+                f"    ✓ tool_call_id linkage: {matched}/{total_billed} billed calls matched"
+            )
         else:
             broken = total_billed - matched
-            print(f"    ✗ tool_call_id linkage: {matched}/{total_billed} matched  ({broken} broken ref{'s' if broken > 1 else ''})")
+            print(
+                f"    ✗ tool_call_id linkage: {matched}/{total_billed} matched  ({broken} broken ref{'s' if broken > 1 else ''})"
+            )
             issues.append(f"{broken} broken credit_usage link(s)")
     print()
 
     # ── billing warnings (unbilled completed calls) ──────────────────────────────
     if warnings:
-        print(f"  billing warnings:  ({len(warnings)} issue{'s' if len(warnings) != 1 else ''})")
+        print(
+            f"  billing warnings:  ({len(warnings)} issue{'s' if len(warnings) != 1 else ''})"
+        )
         for w in warnings:
-            print(f"    ⚠ [{w['toolset']}] {w['tool_name']}  @ {fmt_time(w['created_at'])}")
+            print(
+                f"    ⚠ [{w['toolset']}] {w['tool_name']}  @ {fmt_time(w['created_at'])}"
+            )
             if full:
                 print(f"      CallID: {w['call_id'][:40]}...")
             print("      Reason: Completed but 0 credits charged")
-            print("      Fix:    Ensure tool has isGlobal=true and billing is configured")
+            print(
+                "      Fix:    Ensure tool has isGlobal=true and billing is configured"
+            )
         issues.append(f"{len(warnings)} unbilled completed call(s)")
         print()
 
     # ── Result ──────────────────────────────────────────────────────────────────
     print(DIVIDER)
     if issues:
-        print(f"  Result: ✗ {len(issues)} issue{'s' if len(issues) > 1 else ''} found: {', '.join(issues)}")
+        print(
+            f"  Result: ✗ {len(issues)} issue{'s' if len(issues) > 1 else ''} found: {', '.join(issues)}"
+        )
     else:
         print("  Result: ✓ All checks passed")
     print(DIVIDER)
@@ -192,6 +241,7 @@ def print_checks(cur, r_id, r_ver, r_uid, r_created, ptc_enabled, agent_calls, p
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 
+
 def main():
     parser = make_arg_parser("PTC Verify: billing timeline + consolidated checks")
     args = parser.parse_args()
@@ -199,14 +249,26 @@ def main():
     conn = connect_db()
     cur = conn.cursor()
 
-    r_id, r_ver, r_type, r_model, r_status, r_title, r_input, r_created = resolve_result(cur, args.id)
+    r_id, r_ver, _r_type, r_model, r_status, r_title, r_input, r_created = (
+        resolve_result(cur, args.id, args.title)
+    )
     ptc_enabled = fetch_ptc_enabled(cur, r_id, r_ver)
 
     print(f"\n{SEPARATOR}")
     print(f" PTC VERIFY: {r_id}")
     print(f"{SEPARATOR}\n")
 
-    print_result_info(r_id, r_ver, r_model, r_status, r_title, r_input, r_created, args.full, ptc_enabled=ptc_enabled)
+    print_result_info(
+        r_id,
+        r_ver,
+        r_model,
+        r_status,
+        r_title,
+        r_input,
+        r_created,
+        args.full,
+        ptc_enabled=ptc_enabled,
+    )
 
     cur.execute(
         "SELECT uid FROM refly.action_results WHERE result_id = %s AND version = %s",
@@ -217,10 +279,26 @@ def main():
 
     has_type_col, has_ptc_col = check_schema_columns(cur)
     raw = fetch_billing_tool_calls(cur, r_id, r_ver, has_type_col, has_ptc_col)
-    agent_calls, ptc_by_parent, agent_count, ptc_count, warnings = organize_billing_calls(raw)
+    agent_calls, ptc_by_parent, agent_count, ptc_count, warnings = (
+        organize_billing_calls(raw)
+    )
 
-    print_billing_timeline(agent_calls, ptc_by_parent, raw, agent_count, ptc_count, warnings)
-    print_checks(cur, r_id, r_ver, r_uid, r_created, ptc_enabled, agent_calls, ptc_by_parent, ptc_count, warnings, args.full)
+    print_billing_timeline(
+        agent_calls, ptc_by_parent, raw, agent_count, ptc_count, warnings
+    )
+    print_checks(
+        cur,
+        r_id,
+        r_ver,
+        r_uid,
+        r_created,
+        ptc_enabled,
+        agent_calls,
+        ptc_by_parent,
+        ptc_count,
+        warnings,
+        args.full,
+    )
 
     print(f"{SEPARATOR}\n")
     cur.close()

@@ -23,6 +23,7 @@ from ptc_common import (
 
 # ── Formatting helpers ─────────────────────────────────────────────────────────
 
+
 def format_block(content, separator="-" * 100, truncate_len=TRUNCATE_LEN, full=False):
     if not content:
         return "(empty)"
@@ -55,7 +56,15 @@ def extract_ptc_summary(tool_name, input_data):
         if isinstance(inner, str):
             inner = parse_json_safe(inner) or {}
         if isinstance(inner, dict):
-            for key in ("symbol", "keywords", "query", "ticker", "name", "url", "topic"):
+            for key in (
+                "symbol",
+                "keywords",
+                "query",
+                "ticker",
+                "name",
+                "url",
+                "topic",
+            ):
                 if key in inner:
                     return f"({inner[key]})"
             for k, v in inner.items():
@@ -83,6 +92,7 @@ def extract_output_summary(output_data, tool_name=None):
 
 
 # ── Data fetch / organize ──────────────────────────────────────────────────────
+
 
 def fetch_tool_calls(cur, r_id, r_ver, has_type_col, has_ptc_col):
     if has_type_col and has_ptc_col:
@@ -113,7 +123,17 @@ def organize_calls(raw_rows):
     ptc_by_parent = defaultdict(list)
     agent_count = ptc_count = 0
 
-    for call_id, tool_name, tc_type, status, inp, out, error, created_at, ptc_call_id in raw_rows:
+    for (
+        call_id,
+        tool_name,
+        tc_type,
+        status,
+        inp,
+        out,
+        error,
+        created_at,
+        ptc_call_id,
+    ) in raw_rows:
         is_ptc = (tc_type == "ptc") if tc_type else call_id.startswith("ptc:")
         row = {
             "call_id": call_id,
@@ -138,21 +158,36 @@ def organize_calls(raw_rows):
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 
+
 def main():
-    parser = make_arg_parser("PTC Debug Calling: full execution trace for an agent result")
+    parser = make_arg_parser(
+        "PTC Debug Calling: full execution trace for an agent result"
+    )
     args = parser.parse_args()
 
     conn = connect_db()
     cur = conn.cursor()
 
-    r_id, r_ver, r_type, r_model, r_status, r_title, r_input, r_created = resolve_result(cur, args.id)
+    r_id, r_ver, _r_type, r_model, r_status, r_title, r_input, r_created = (
+        resolve_result(cur, args.id, args.title)
+    )
     ptc_enabled = fetch_ptc_enabled(cur, r_id, r_ver)
 
     print(f"\n{SEPARATOR}")
     print(f" PTC DEBUG CALLING: {r_id}")
     print(f"{SEPARATOR}\n")
 
-    print_result_info(r_id, r_ver, r_model, r_status, r_title, r_input, r_created, args.full, ptc_enabled=ptc_enabled)
+    print_result_info(
+        r_id,
+        r_ver,
+        r_model,
+        r_status,
+        r_title,
+        r_input,
+        r_created,
+        args.full,
+        ptc_enabled=ptc_enabled,
+    )
 
     # [2] CONVERSATION MESSAGES
     cur.execute(
@@ -179,7 +214,9 @@ def main():
         if isinstance(meta, dict) and meta.get("toolName"):
             status_icon = fmt_status_icon(meta.get("status", ""))
             meta_info = f" [{meta['toolName']} {status_icon}]"
-        print(f"  --- {label} ({msg_id or '?'}) @ {fmt_time(created_at)}{meta_info} ---")
+        print(
+            f"  --- {label} ({msg_id or '?'}) @ {fmt_time(created_at)}{meta_info} ---"
+        )
         if content:
             display = truncate(content, TRUNCATE_LEN, args.full)
             for line in display.split("\n"):
@@ -196,11 +233,15 @@ def main():
 
     for ac in agent_calls:
         status_icon = fmt_status_icon(ac["status"])
-        print(f"  [Agent] {ac['tool_name']} @ {fmt_time(ac['created_at'])} ({ac['status']}) {status_icon}")
+        print(
+            f"  [Agent] {ac['tool_name']} @ {fmt_time(ac['created_at'])} ({ac['status']}) {status_icon}"
+        )
 
         if ac["tool_name"] == "execute_code":
             code = extract_code_input(ac["input"])
-            print(f"    Code: {format_block(code, truncate_len=TRUNCATE_LEN, full=args.full)}")
+            print(
+                f"    Code: {format_block(code, truncate_len=TRUNCATE_LEN, full=args.full)}"
+            )
             parsed_input = parse_json_safe(ac["input"])
             if isinstance(parsed_input, dict) and parsed_input.get("language"):
                 print(f"    Lang: {parsed_input['language']}")
@@ -210,20 +251,28 @@ def main():
                 print(f"    Input: {inp_display}")
 
         out_summary = extract_output_summary(ac["output"], ac["tool_name"])
-        print(f"    Output: {format_block(out_summary, truncate_len=TRUNCATE_LEN, full=args.full)}")
+        print(
+            f"    Output: {format_block(out_summary, truncate_len=TRUNCATE_LEN, full=args.full)}"
+        )
 
         if ac["error"]:
-            print(f"    Error: {format_block(ac['error'], truncate_len=TRUNCATE_LEN, full=args.full)}")
+            print(
+                f"    Error: {format_block(ac['error'], truncate_len=TRUNCATE_LEN, full=args.full)}"
+            )
 
         for ptc in ptc_by_parent.get(ac["call_id"], []):
             ptc_icon = fmt_status_icon(ptc["status"])
             ptc_summary = extract_ptc_summary(ptc["tool_name"], ptc["input"])
-            print(f"    └─ [PTC] {ptc['tool_name']} {ptc_summary} @ {fmt_time(ptc['created_at'])} {ptc_icon}")
+            print(
+                f"    └─ [PTC] {ptc['tool_name']} {ptc_summary} @ {fmt_time(ptc['created_at'])} {ptc_icon}"
+            )
             if args.full:
                 if ptc["input"]:
                     print(f"       Input: {ptc['input']}")
                 if ptc["output"]:
-                    print(f"       Output: {truncate(ptc['output'], TRUNCATE_LEN, args.full)}")
+                    print(
+                        f"       Output: {truncate(ptc['output'], TRUNCATE_LEN, args.full)}"
+                    )
                 if ptc["error"]:
                     print(f"       Error: {ptc['error']}")
         print()
@@ -234,14 +283,17 @@ def main():
         (call_id, tool_name, status, inp, created_at, ptc_call_id)
         for call_id, tool_name, tc_type, status, inp, out, error, created_at, ptc_call_id in raw
         if ((tc_type == "ptc") if tc_type else call_id.startswith("ptc:"))
-        and ptc_call_id and ptc_call_id not in all_agent_ids
+        and ptc_call_id
+        and ptc_call_id not in all_agent_ids
     ]
     if orphan_ptc:
         print(f"  [Orphan PTC calls — parent not found] ({len(orphan_ptc)})")
         for call_id, tool_name, status, inp, created_at, ptc_call_id in orphan_ptc:
             icon = fmt_status_icon(status)
             summary = extract_ptc_summary(tool_name, inp)
-            print(f"    └─ [PTC] {tool_name} {summary} @ {fmt_time(created_at)} {icon}  (parent: {ptc_call_id})")
+            print(
+                f"    └─ [PTC] {tool_name} {summary} @ {fmt_time(created_at)} {icon}  (parent: {ptc_call_id})"
+            )
         print()
 
     cur.close()
