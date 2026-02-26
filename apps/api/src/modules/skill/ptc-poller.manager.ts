@@ -141,10 +141,6 @@ export class PtcPollerManager {
   ): void {
     const { res, resultId, version, messageAggregator, getRunMeta } = this.context;
 
-    if (!res) {
-      return;
-    }
-
     const parsedInput = safeParseJSON(ptcCall.input || '{}') ?? {};
     const parsedOutput = safeParseJSON(ptcCall.output || '{}') ?? {};
 
