@@ -233,6 +233,41 @@ export class WorkflowPlanService {
   }
 
   /**
+   * Get the latest workflow plan for a canvas by looking up the most recent copilot session
+   */
+  async getLatestWorkflowPlanByCanvas(
+    user: User,
+    params: { canvasId: string },
+  ): Promise<WorkflowPlan | null> {
+    const { canvasId } = params;
+    if (!canvasId) {
+      throw new ParamsError('Canvas ID is required');
+    }
+
+    // Step 1: Find the most recent copilot session for this canvas
+    const session = await this.prisma.copilotSession.findFirst({
+      where: { canvasId, uid: user.uid },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!session) {
+      return null;
+    }
+
+    // Step 2: Find the latest plan version in that session
+    const latestPlan = await this.prisma.workflowPlan.findFirst({
+      where: { copilotSessionId: session.sessionId, uid: user.uid },
+      orderBy: { version: 'desc' },
+    });
+
+    if (!latestPlan) {
+      return null;
+    }
+
+    return this.workflowPlanPO2DTO(latestPlan as WorkflowPlanPO);
+  }
+
+  /**
    * Convert WorkflowPlan PO to DTO
    * The API schema exposes: planId, version, data fields, patchOperations, createdAt, updatedAt
    * Internal fields (resultId, resultVersion, copilotSessionId) are not exposed

@@ -200,6 +200,10 @@ export interface ReflyService {
     user: User,
     params: { planId: string },
   ) => Promise<WorkflowPlanRecord | null>;
+  getLatestWorkflowPlanByCanvas: (
+    user: User,
+    params: { canvasId: string },
+  ) => Promise<WorkflowPlanRecord | null>;
 
   // Canvas data retrieval
   getCanvasData: (

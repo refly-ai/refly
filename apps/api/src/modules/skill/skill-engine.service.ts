@@ -366,6 +366,9 @@ export class SkillEngineService implements OnModuleInit {
       getWorkflowPlanById: async (user, params) => {
         return await this.workflowPlanService.getWorkflowPlanDetail(user, params);
       },
+      getLatestWorkflowPlanByCanvas: async (user, params) => {
+        return await this.workflowPlanService.getLatestWorkflowPlanByCanvas(user, params);
+      },
     };
   };
 

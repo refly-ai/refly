@@ -144,19 +144,27 @@ Notes:
       let planId = input.planId;
       if (!planId) {
         const copilotSessionId = config.configurable?.copilotSessionId;
-        if (!copilotSessionId) {
-          return {
-            status: 'error',
-            data: { error: 'copilotSessionId is required when planId is not provided' },
-            summary: 'Missing copilotSessionId',
-          };
+        let latestPlan: WorkflowPlanRecord | null = null;
+
+        // Try current session first
+        if (copilotSessionId) {
+          latestPlan = await reflyService.getLatestWorkflowPlan(user, { copilotSessionId });
         }
 
-        const latestPlan = await reflyService.getLatestWorkflowPlan(user, { copilotSessionId });
+        // Fallback: find plan from any previous session on the same canvas
+        if (!latestPlan) {
+          const canvasId = config.configurable?.canvasId;
+          if (canvasId) {
+            latestPlan = await reflyService.getLatestWorkflowPlanByCanvas(user, {
+              canvasId,
+            });
+          }
+        }
+
         if (!latestPlan) {
           return {
             status: 'error',
-            data: { error: 'No existing workflow plan found for this session' },
+            data: { error: 'No existing workflow plan found for this canvas' },
             summary: 'Workflow plan not found',
           };
         }
@@ -248,17 +256,19 @@ Use this tool when you need to:
           };
         }
       } else {
+        // Try current session first
         const copilotSessionId = config.configurable?.copilotSessionId;
-        if (!copilotSessionId) {
-          return {
-            status: 'error',
-            data: { error: 'copilotSessionId is required to retrieve the workflow plan' },
-            summary: 'Missing session context',
-          };
+        if (copilotSessionId) {
+          plan = await reflyService.getLatestWorkflowPlan(user, { copilotSessionId });
         }
-        plan = await reflyService.getLatestWorkflowPlan(user, {
-          copilotSessionId,
-        });
+
+        // Fallback: find plan from any previous session on the same canvas
+        if (!plan) {
+          const canvasId = config.configurable?.canvasId;
+          if (canvasId) {
+            plan = await reflyService.getLatestWorkflowPlanByCanvas(user, { canvasId });
+          }
+        }
       }
 
       if (!plan) {
@@ -358,17 +368,37 @@ Use this tool when you need to:
         nodeTypeCounts[t] = (nodeTypeCounts[t] ?? 0) + 1;
       }
 
-      // Summarize nodes: strip position/style/metadata noise
+      // Summarize nodes: strip position/style noise, keep key metadata for skillResponse
       const truncated = allNodes.length > MAX_SNAPSHOT_NODES;
-      const nodesToReturn = allNodes.slice(0, MAX_SNAPSHOT_NODES).map((node) => ({
-        id: node.id,
-        type: node.type,
-        title: node.data?.title,
-        entityId: node.data?.entityId,
-        contentPreview: node.data?.contentPreview
-          ? truncateContent(node.data.contentPreview, MAX_PREVIEW_LENGTH)
-          : undefined,
-      }));
+      const nodesToReturn = allNodes.slice(0, MAX_SNAPSHOT_NODES).map((node) => {
+        const metadata = (node.data as any)?.metadata;
+        const base: Record<string, any> = {
+          id: node.id,
+          type: node.type,
+          title: node.data?.title,
+          entityId: node.data?.entityId,
+          contentPreview: node.data?.contentPreview
+            ? truncateContent(node.data.contentPreview, MAX_PREVIEW_LENGTH)
+            : undefined,
+        };
+
+        // For skillResponse nodes, include query and toolsets so Agent can understand the workflow
+        if (node.type === 'skillResponse' && metadata) {
+          if (metadata.query) {
+            base.query = truncateContent(metadata.query, 200);
+          }
+          if (metadata.selectedToolsets?.length) {
+            base.toolsets = metadata.selectedToolsets
+              .map((t: any) => t.id ?? t.toolset?.key)
+              .filter(Boolean);
+          }
+          if (metadata.taskId) {
+            base.taskId = metadata.taskId;
+          }
+        }
+
+        return base;
+      });
 
       // Summarize edges
       const edgesTruncated = allEdges.length > MAX_SNAPSHOT_EDGES;
