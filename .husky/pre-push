@@ -1,2 +1,6 @@
 echo "[husky pre-push] starting local Codex/Claude review loop..."
-./scripts/git-hooks/codex-pre-push-review.sh
+if [ -x "./scripts/git-hooks/codex-pre-push-review.sh" ]; then
+  ./scripts/git-hooks/codex-pre-push-review.sh
+else
+  echo "[husky pre-push] skip: review script not found"
+fi
