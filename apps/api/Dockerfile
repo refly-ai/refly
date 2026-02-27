@@ -28,9 +28,6 @@ COPY . .
 # Build packages in correct order
 RUN pnpm build:api
 
-# wkhtmltopdf stage
-FROM surnet/alpine-wkhtmltopdf:3.20.3-0.12.6-small AS wkhtmltopdf
-
 # Production stage
 FROM node:24.13.1-slim AS production
 WORKDIR /app
@@ -55,11 +52,9 @@ RUN apt-get update \
     fonts-noto-cjk \
     fonts-font-awesome \
     fonts-noto-extra \
+    wkhtmltopdf \
     && fc-cache -f \
     && rm -rf /var/lib/apt/lists/*
-
-# Copy wkhtmltopdf
-COPY --from=wkhtmltopdf /bin/wkhtmltopdf /bin/wkhtmltopdf
 
 # Install pandoc based on architecture
 ARG TARGETARCH
