@@ -358,19 +358,54 @@ export class BillingService implements OnModuleInit {
     } = options;
 
     try {
-      // Determine credit cost
-      let finalDiscountedPrice = 1;
-      let finalOriginalPrice = 1;
+      // Determine credit cost — default to 0 (not 1) so tools without
+      // any billing config are not silently charged 1 credit.
+      let finalDiscountedPrice = 0;
+      let finalOriginalPrice = 0;
       let resolvedFromDynamicBilling = false;
+      let resolvedFromDirectPrice = false;
+      let resolvedFromLegacyBilling = false;
+      let resolvedFromExplicitNoCharge = false;
       let dynamicBillingFailed = false;
 
-      if (discountedPrice !== undefined && discountedPrice > 0) {
+      // Validate direct-price inputs are finite and non-negative
+      if (discountedPrice !== undefined) {
+        if (!Number.isFinite(discountedPrice) || discountedPrice < 0) {
+          return {
+            success: false,
+            discountedPrice: 0,
+            flushedCredits: 0,
+            error: `Invalid discountedPrice: ${discountedPrice} (must be finite and >= 0)`,
+          };
+        }
+      }
+      if (originalPrice !== undefined) {
+        if (!Number.isFinite(originalPrice) || originalPrice < 0) {
+          return {
+            success: false,
+            discountedPrice: 0,
+            flushedCredits: 0,
+            error: `Invalid originalPrice: ${originalPrice} (must be finite and >= 0)`,
+          };
+        }
+      }
+
+      if (discountedPrice !== undefined) {
         // Direct credit cost provided (Composio scenario)
+        // Changed from `discountedPrice > 0` to `!== undefined` so that
+        // explicitly passing 0 is treated as "zero cost" rather than falling
+        // through to dynamic/legacy billing.
+        resolvedFromDirectPrice = true;
         finalDiscountedPrice = discountedPrice;
         finalOriginalPrice = originalPrice ?? discountedPrice;
       } else {
+        // Check for explicit no-charge configuration
+        if (billingConfig && billingConfig.enabled === false) {
+          resolvedFromExplicitNoCharge = true;
+        }
+
         // Try new dynamic billing system first (if schemas provided)
-        if (requestSchema && responseSchema && (input || output)) {
+        if (!resolvedFromExplicitNoCharge && requestSchema && responseSchema && (input || output)) {
           try {
             const config = await this.getBillingConfig(toolsetKey, toolName);
 
@@ -400,20 +435,56 @@ export class BillingService implements OnModuleInit {
         }
 
         // Legacy billing fallback (if no new config or error occurred)
-        if (!resolvedFromDynamicBilling && billingConfig?.enabled) {
+        if (
+          !resolvedFromDynamicBilling &&
+          !resolvedFromExplicitNoCharge &&
+          billingConfig?.enabled
+        ) {
           if (dynamicBillingFailed) {
             this.logger.debug('Falling back to legacy billing after dynamic billing failure');
           }
           this.logger.debug(`Using legacy billing for ${toolsetKey}:${toolName}`);
           finalDiscountedPrice = calculateCredits(billingConfig, params || {});
-          finalOriginalPrice = finalDiscountedPrice; // No discount in dynamic-tooling scenario
+          finalOriginalPrice = finalDiscountedPrice;
+          resolvedFromLegacyBilling = true;
         }
       }
 
+      // Final finiteness guard on computed prices
+      if (!Number.isFinite(finalDiscountedPrice)) {
+        this.logger.error(
+          `Non-finite finalDiscountedPrice (${finalDiscountedPrice}) for ${toolsetKey}:${toolName}, resetting to 0`,
+        );
+        finalDiscountedPrice = 0;
+      }
+      if (!Number.isFinite(finalOriginalPrice)) {
+        this.logger.error(
+          `Non-finite finalOriginalPrice (${finalOriginalPrice}) for ${toolsetKey}:${toolName}, resetting to 0`,
+        );
+        finalOriginalPrice = 0;
+      }
+
+      // Warn when no billing source resolved and this isn't a known-free toolset
+      if (
+        !resolvedFromDirectPrice &&
+        !resolvedFromDynamicBilling &&
+        !resolvedFromLegacyBilling &&
+        !resolvedFromExplicitNoCharge &&
+        !FREE_TOOLSET_KEYS.includes(toolsetKey)
+      ) {
+        this.logger.warn(
+          `No billing source resolved for ${toolsetKey}:${toolName} — charging 0 credits. This may indicate a missing billing configuration.`,
+        );
+      }
+
       // Apply toolset-based free access (specific toolsets are one month free)
+      let _appliedFreeAccessOverride = false;
       if (FREE_TOOLSET_KEYS.includes(toolsetKey) && finalDiscountedPrice > 0) {
         const hasFreeToolAccess = await this.checkFreeToolAccess(uid);
-        finalDiscountedPrice = hasFreeToolAccess ? 0 : finalDiscountedPrice;
+        if (hasFreeToolAccess) {
+          _appliedFreeAccessOverride = true;
+          finalDiscountedPrice = 0;
+        }
       }
 
       // Route through unified per-user accumulator for sub-credit precision

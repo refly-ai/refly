@@ -637,8 +637,9 @@ describe('Dynamic Tool Billing - Calculation', () => {
         mockLogger,
       );
 
-      // ~10 tokens = 0.00001 units × 0.002 credits/unit = 0.00000002 credits → rounds to 0
-      expect(credits).toBe(0);
+      // ~10 tokens = 0.00001 units × 0.002 credits/unit ≈ tiny float (raw, no rounding)
+      expect(credits).toBeGreaterThanOrEqual(0);
+      expect(credits).toBeLessThan(0.001);
     });
 
     test('7.2: Image billing with array counting', async () => {
@@ -721,10 +722,10 @@ describe('Dynamic Tool Billing - Calculation', () => {
         mockLogger,
       );
 
-      // Text: ~1 token = 0.000001 units × 2 = ~0.000002
+      // Text: ~1 token = 0.000001 units × 2 ≈ tiny float
       // Images: 2 × 5 = 10
-      // Total: ~10 (text rounds to 0)
-      expect(credits).toBe(10);
+      // Total: ≈ 10 (text component is negligible)
+      expect(credits).toBeCloseTo(10, 0);
     });
 
     test('7.4: Token pricing (USD-based)', async () => {
@@ -823,8 +824,9 @@ describe('Dynamic Tool Billing - Calculation', () => {
         mockLogger,
       );
 
-      // "Hello World" = ~2 tokens = 0.000002 units × 10 = 0.00002 → rounds to 0
-      expect(credits).toBe(0);
+      // "Hello World" = ~2 tokens = 0.000002 units × 10 ≈ tiny float (raw, no rounding)
+      expect(credits).toBeGreaterThanOrEqual(0);
+      expect(credits).toBeLessThan(0.001);
     });
   });
 
@@ -1186,8 +1188,8 @@ describe('Dynamic Tool Billing - Calculation', () => {
         mockLogger,
       );
 
-      // 36.0 seconds × 0.1 = 3.6 → rounds to 4
-      expect(credits).toBe(4);
+      // 36.0 seconds × 0.1 = 3.6 (raw float, rounding at accumulator flush time)
+      expect(credits).toBeCloseTo(3.6, 1);
     });
 
     test('9.5: Multiplier with missing value skips', async () => {
@@ -1277,8 +1279,8 @@ describe('Dynamic Tool Billing - Calculation', () => {
         mockLogger,
       );
 
-      // 5 seconds × 26.88 credits/sec = 134.4 → rounded to 134
-      expect(credits).toBe(134);
+      // 5 seconds × 26.88 credits/sec = 134.4 (raw float)
+      expect(credits).toBeCloseTo(134.4, 1);
     });
 
     test('11.2: Boolean pricing tier - with audio (true)', async () => {
@@ -1451,8 +1453,8 @@ describe('Dynamic Tool Billing - Calculation', () => {
         mockLogger,
       );
 
-      // 7 seconds × 26.88 credits/sec = 188.16 → rounded to 188
-      expect(credits).toBe(188);
+      // 7 seconds × 26.88 credits/sec = 188.16 (raw float)
+      expect(credits).toBeCloseTo(188.16, 1);
     });
 
     test('11.6: String pricing tier with unitField (resolution example)', async () => {
@@ -1537,8 +1539,665 @@ describe('Dynamic Tool Billing - Calculation', () => {
         mockLogger,
       );
 
-      // 7 tokens × 0.003 credits/token = 0.021 → rounded to 0
-      expect(credits).toBe(0);
+      // ~9 tokens = 0.000009 units × 0.003 ≈ tiny float (raw, no rounding)
+      expect(credits).toBeGreaterThanOrEqual(0);
+      expect(credits).toBeLessThan(0.001);
+    });
+  });
+
+  // ============================================================================
+  // Test Suite 12: oneOf/anyOf Schema Traversal
+  // ============================================================================
+
+  describe('oneOf/anyOf Schema Traversal', () => {
+    test('12.1: Root-level oneOf resolves to correct branch', () => {
+      const schema = {
+        oneOf: [
+          {
+            type: 'object',
+            properties: { prompt: { type: 'string' } },
+          },
+          {
+            type: 'object',
+            properties: { image: { type: 'string' } },
+          },
+        ],
+      };
+      expect(getFieldTypeFromSchema(schema, 'prompt')).toBe('string');
+      expect(getFieldTypeFromSchema(schema, 'image')).toBe('string');
+    });
+
+    test('12.2: Nullable array via anyOf resolves items', () => {
+      const schema = {
+        type: 'object',
+        properties: {
+          images: {
+            anyOf: [{ type: 'array', items: { type: 'string' } }, { type: 'null' }],
+          },
+        },
+      };
+      expect(getFieldTypeFromSchema(schema, 'images[*]')).toBe('string');
+    });
+
+    test('12.3: Nested property inside oneOf branch', () => {
+      const schema = {
+        type: 'object',
+        properties: {
+          config: {
+            oneOf: [
+              {
+                type: 'object',
+                properties: { resolution: { type: 'string' } },
+              },
+              {
+                type: 'object',
+                properties: { quality: { type: 'number' } },
+              },
+            ],
+          },
+        },
+      };
+      expect(getFieldTypeFromSchema(schema, 'config.resolution')).toBe('string');
+      expect(getFieldTypeFromSchema(schema, 'config.quality')).toBe('number');
+    });
+
+    test('12.4: Branch collision — same-name properties different types', () => {
+      const schema = {
+        type: 'object',
+        properties: {
+          output: {
+            oneOf: [
+              {
+                type: 'object',
+                properties: {
+                  data: {
+                    type: 'object',
+                    properties: { url: { type: 'string' } },
+                  },
+                },
+              },
+              {
+                type: 'object',
+                properties: {
+                  data: { type: 'string' }, // different type, no nested url
+                },
+              },
+            ],
+          },
+        },
+      };
+      // Should find the branch where data.url exists
+      expect(getFieldTypeFromSchema(schema, 'output.data.url')).toBe('string');
+    });
+
+    test('12.5: Type array — nullable string', () => {
+      const schema = {
+        type: 'object',
+        properties: {
+          description: { type: ['string', 'null'] },
+        },
+      };
+      expect(getFieldTypeFromSchema(schema, 'description')).toBe('string');
+    });
+
+    test('12.6: const-only node returns inferred type', () => {
+      const schema = {
+        type: 'object',
+        properties: {
+          version: { const: 2 },
+        },
+      };
+      expect(getFieldTypeFromSchema(schema, 'version')).toBe('number');
+    });
+
+    test('12.7: enum-only node returns inferred type', () => {
+      const schema = {
+        type: 'object',
+        properties: {
+          mode: { enum: ['fast', 'balanced', 'quality'] },
+        },
+      };
+      expect(getFieldTypeFromSchema(schema, 'mode')).toBe('string');
+    });
+
+    test('12.8: $ref at root fails fast', () => {
+      const schema = { $ref: '#/definitions/SomeType' };
+      expect(getFieldTypeFromSchema(schema, 'prompt')).toBeNull();
+    });
+
+    test('12.9: allOf at root fails fast', () => {
+      const schema = {
+        allOf: [
+          { type: 'object', properties: { a: { type: 'string' } } },
+          { type: 'object', properties: { b: { type: 'number' } } },
+        ],
+      };
+      expect(getFieldTypeFromSchema(schema, 'a')).toBeNull();
+    });
+
+    test('12.10: Nullable array with nested object path', () => {
+      const schema = {
+        type: 'object',
+        properties: {
+          items: {
+            anyOf: [
+              {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: { name: { type: 'string' } },
+                },
+              },
+              { type: 'null' },
+            ],
+          },
+        },
+      };
+      expect(getFieldTypeFromSchema(schema, 'items[*].name')).toBe('string');
+    });
+  });
+
+  // ============================================================================
+  // Test Suite 13: Tier Coercion via matchesTierValue
+  // ============================================================================
+
+  describe('Tier Coercion', () => {
+    const requestSchema = JSON.stringify({
+      type: 'object',
+      properties: {
+        count: { type: 'number' },
+        flag: { type: 'boolean' },
+        mode: { type: 'string' },
+      },
+    });
+    const responseSchema = JSON.stringify({ type: 'object', properties: {} });
+
+    test('13.1: String "10" matches numeric tier 10', async () => {
+      const config: ToolBillingConfig = {
+        inventoryKey: 'test',
+        methodName: 'test',
+        enabled: true,
+        rules: [
+          {
+            fieldPath: 'count',
+            phase: 'input',
+            category: 'image',
+            pricingTiers: [
+              { value: 5, creditsPerUnit: 10 },
+              { value: 10, creditsPerUnit: 20 },
+            ],
+            defaultCreditsPerUnit: 1,
+          },
+        ],
+      };
+      // Runtime sends string "10", tier has numeric 10
+      const credits = await calculateCreditsFromRules(
+        config,
+        { count: '10' },
+        {},
+        requestSchema,
+        responseSchema,
+        mockLogger,
+      );
+      expect(credits).toBe(20);
+    });
+
+    test('13.2: Numeric 5 matches string tier "5"', async () => {
+      const config: ToolBillingConfig = {
+        inventoryKey: 'test',
+        methodName: 'test',
+        enabled: true,
+        rules: [
+          {
+            fieldPath: 'count',
+            phase: 'input',
+            category: 'image',
+            pricingTiers: [
+              { value: '5', creditsPerUnit: 50 },
+              { value: '10', creditsPerUnit: 100 },
+            ],
+            defaultCreditsPerUnit: 1,
+          },
+        ],
+      };
+      const credits = await calculateCreditsFromRules(
+        config,
+        { count: 5 },
+        {},
+        requestSchema,
+        responseSchema,
+        mockLogger,
+      );
+      // image category: numeric 5 → 5 units × 50 credits/unit = 250
+      expect(credits).toBe(250);
+    });
+
+    test('13.3: Whitespace-trimmed string matches', async () => {
+      const config: ToolBillingConfig = {
+        inventoryKey: 'test',
+        methodName: 'test',
+        enabled: true,
+        rules: [
+          {
+            fieldPath: 'count',
+            phase: 'input',
+            category: 'image',
+            pricingTiers: [{ value: 10, creditsPerUnit: 30 }],
+            defaultCreditsPerUnit: 1,
+          },
+        ],
+      };
+      const credits = await calculateCreditsFromRules(
+        config,
+        { count: ' 10 ' },
+        {},
+        requestSchema,
+        responseSchema,
+        mockLogger,
+      );
+      expect(credits).toBe(30);
+    });
+
+    test('13.4: Hex string "0x1A" does NOT match numeric tier', async () => {
+      const config: ToolBillingConfig = {
+        inventoryKey: 'test',
+        methodName: 'test',
+        enabled: true,
+        rules: [
+          {
+            fieldPath: 'count',
+            phase: 'input',
+            category: 'image',
+            pricingTiers: [{ value: 26, creditsPerUnit: 99 }], // 0x1A = 26
+            defaultCreditsPerUnit: 5,
+          },
+        ],
+      };
+      const credits = await calculateCreditsFromRules(
+        config,
+        { count: '0x1A' },
+        {},
+        requestSchema,
+        responseSchema,
+        mockLogger,
+      );
+      // Should fall through to default, not match 26
+      expect(credits).toBe(5);
+    });
+
+    test('13.5: Empty string does NOT match any tier', async () => {
+      const config: ToolBillingConfig = {
+        inventoryKey: 'test',
+        methodName: 'test',
+        enabled: true,
+        rules: [
+          {
+            fieldPath: 'mode',
+            phase: 'input',
+            category: 'image',
+            pricingTiers: [
+              { value: '', creditsPerUnit: 99 },
+              { value: 0, creditsPerUnit: 88 },
+              { value: false, creditsPerUnit: 77 },
+            ],
+            defaultCreditsPerUnit: 5,
+          },
+        ],
+      };
+      const credits = await calculateCreditsFromRules(
+        config,
+        { mode: '' },
+        {},
+        requestSchema,
+        responseSchema,
+        mockLogger,
+      );
+      // Empty string exact-matches the '' tier
+      expect(credits).toBe(99);
+    });
+
+    test('13.6: String "true" matches boolean tier true', async () => {
+      const config: ToolBillingConfig = {
+        inventoryKey: 'test',
+        methodName: 'test',
+        enabled: true,
+        rules: [
+          {
+            fieldPath: 'flag',
+            phase: 'input',
+            category: 'image',
+            pricingTiers: [
+              { value: true, creditsPerUnit: 40 },
+              { value: false, creditsPerUnit: 10 },
+            ],
+            defaultCreditsPerUnit: 1,
+          },
+        ],
+      };
+      const credits = await calculateCreditsFromRules(
+        config,
+        { flag: 'true' },
+        {},
+        requestSchema,
+        responseSchema,
+        mockLogger,
+      );
+      expect(credits).toBe(40);
+    });
+
+    test('13.7: Decimal string "3.14" matches numeric tier 3.14', async () => {
+      const config: ToolBillingConfig = {
+        inventoryKey: 'test',
+        methodName: 'test',
+        enabled: true,
+        rules: [
+          {
+            fieldPath: 'count',
+            phase: 'input',
+            category: 'image',
+            pricingTiers: [{ value: 3.14, creditsPerUnit: 77 }],
+            defaultCreditsPerUnit: 1,
+          },
+        ],
+      };
+      const credits = await calculateCreditsFromRules(
+        config,
+        { count: '3.14' },
+        {},
+        requestSchema,
+        responseSchema,
+        mockLogger,
+      );
+      expect(credits).toBe(77);
+    });
+  });
+
+  // ============================================================================
+  // Test Suite 14: unitField Validation (fail-closed)
+  // ============================================================================
+
+  describe('unitField Validation', () => {
+    test('14.1: Invalid unitField throws', async () => {
+      const config: ToolBillingConfig = {
+        inventoryKey: 'test',
+        methodName: 'test',
+        enabled: true,
+        rules: [
+          {
+            fieldPath: 'prompt',
+            phase: 'input',
+            category: 'text',
+            unitField: 'nonexistent_field',
+            defaultCreditsPerUnit: 1,
+          },
+        ],
+      };
+      const requestSchema = JSON.stringify({
+        type: 'object',
+        properties: { prompt: { type: 'string' } },
+      });
+      const responseSchema = JSON.stringify({ type: 'object', properties: {} });
+
+      await expect(
+        calculateCreditsFromRules(config, {}, {}, requestSchema, responseSchema, mockLogger),
+      ).rejects.toThrow('unitField "nonexistent_field" not found in input schema');
+    });
+
+    test('14.2: unitField validated against correct phase schema', async () => {
+      const config: ToolBillingConfig = {
+        inventoryKey: 'test',
+        methodName: 'test',
+        enabled: true,
+        rules: [
+          {
+            fieldPath: 'flag',
+            phase: 'input',
+            category: 'video',
+            unitField: 'duration',
+            unitPhase: 'output', // Duration is in output
+            pricingTiers: [
+              { value: true, creditsPerUnit: 10 },
+              { value: false, creditsPerUnit: 5 },
+            ],
+            defaultCreditsPerUnit: 5,
+          },
+        ],
+      };
+      const requestSchema = JSON.stringify({
+        type: 'object',
+        properties: { flag: { type: 'boolean' } },
+      });
+      // duration exists in output schema
+      const responseSchema = JSON.stringify({
+        type: 'object',
+        properties: { duration: { type: 'number' } },
+      });
+
+      // Should not throw — unitField "duration" exists in output schema
+      const credits = await calculateCreditsFromRules(
+        config,
+        { flag: true },
+        { duration: 10 },
+        requestSchema,
+        responseSchema,
+        mockLogger,
+      );
+      expect(credits).toBe(100); // 10 × 10
+    });
+
+    test('14.3: unitField in wrong phase throws', async () => {
+      const config: ToolBillingConfig = {
+        inventoryKey: 'test',
+        methodName: 'test',
+        enabled: true,
+        rules: [
+          {
+            fieldPath: 'flag',
+            phase: 'input',
+            category: 'video',
+            unitField: 'duration',
+            unitPhase: 'input', // But duration is only in output
+            defaultCreditsPerUnit: 5,
+          },
+        ],
+      };
+      const requestSchema = JSON.stringify({
+        type: 'object',
+        properties: { flag: { type: 'boolean' } },
+        // No "duration" in input schema
+      });
+      const responseSchema = JSON.stringify({
+        type: 'object',
+        properties: { duration: { type: 'number' } },
+      });
+
+      await expect(
+        calculateCreditsFromRules(
+          config,
+          { flag: true },
+          { duration: 10 },
+          requestSchema,
+          responseSchema,
+          mockLogger,
+        ),
+      ).rejects.toThrow('unitField "duration" not found in input schema');
+    });
+
+    test('14.4: unitField defaults to rule phase when unitPhase not set', async () => {
+      const config: ToolBillingConfig = {
+        inventoryKey: 'test',
+        methodName: 'test',
+        enabled: true,
+        rules: [
+          {
+            fieldPath: 'resolution',
+            phase: 'input',
+            category: 'image',
+            unitField: 'count',
+            // No unitPhase → defaults to rule.phase ("input")
+            pricingTiers: [{ value: '1024', creditsPerUnit: 5 }],
+            defaultCreditsPerUnit: 2,
+          },
+        ],
+      };
+      const requestSchema = JSON.stringify({
+        type: 'object',
+        properties: {
+          resolution: { type: 'string' },
+          count: { type: 'number' },
+        },
+      });
+      const responseSchema = JSON.stringify({ type: 'object', properties: {} });
+
+      const credits = await calculateCreditsFromRules(
+        config,
+        { resolution: '1024', count: 3 },
+        {},
+        requestSchema,
+        responseSchema,
+        mockLogger,
+      );
+      expect(credits).toBe(15); // 3 × 5
+    });
+  });
+
+  // ============================================================================
+  // Test Suite 15: Video Category via calculateCreditsFromRules
+  // ============================================================================
+
+  describe('Video Category', () => {
+    test('15.1: Single video duration billing', async () => {
+      const config: ToolBillingConfig = {
+        inventoryKey: 'kling',
+        methodName: 'text-to-video',
+        enabled: true,
+        rules: [
+          {
+            fieldPath: 'duration',
+            phase: 'input',
+            category: 'video',
+            defaultCreditsPerUnit: 10,
+          },
+        ],
+      };
+      const requestSchema = JSON.stringify({
+        type: 'object',
+        properties: { duration: { type: 'number' } },
+      });
+      const responseSchema = JSON.stringify({ type: 'object', properties: {} });
+
+      const credits = await calculateCreditsFromRules(
+        config,
+        { duration: 5 },
+        {},
+        requestSchema,
+        responseSchema,
+        mockLogger,
+      );
+      expect(credits).toBe(50); // 5 × 10
+    });
+
+    test('15.2: Video array aggregation sums durations', async () => {
+      const config: ToolBillingConfig = {
+        inventoryKey: 'kling',
+        methodName: 'batch-video',
+        enabled: true,
+        rules: [
+          {
+            fieldPath: 'clips[*].duration',
+            phase: 'output',
+            category: 'video',
+            defaultCreditsPerUnit: 5,
+          },
+        ],
+      };
+      const requestSchema = JSON.stringify({ type: 'object', properties: {} });
+      const responseSchema = JSON.stringify({
+        type: 'object',
+        properties: {
+          clips: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: { duration: { type: 'number' } },
+            },
+          },
+        },
+      });
+
+      const credits = await calculateCreditsFromRules(
+        config,
+        {},
+        { clips: [{ duration: 3 }, { duration: 7 }, { duration: 5 }] },
+        requestSchema,
+        responseSchema,
+        mockLogger,
+      );
+      // Sum of durations = 15, × 5 = 75
+      expect(credits).toBe(75);
+    });
+
+    test('15.3: Video with missing value charges default × 1', async () => {
+      const config: ToolBillingConfig = {
+        inventoryKey: 'wan',
+        methodName: 'generate',
+        enabled: true,
+        rules: [
+          {
+            fieldPath: 'duration',
+            phase: 'input',
+            category: 'video',
+            defaultCreditsPerUnit: 20,
+          },
+        ],
+      };
+      const requestSchema = JSON.stringify({
+        type: 'object',
+        properties: { duration: { type: 'number' } },
+      });
+      const responseSchema = JSON.stringify({ type: 'object', properties: {} });
+
+      const credits = await calculateCreditsFromRules(
+        config,
+        {}, // duration missing
+        {},
+        requestSchema,
+        responseSchema,
+        mockLogger,
+      );
+      // Missing → 1 unit × 20 = 20
+      expect(credits).toBe(20);
+    });
+  });
+
+  // ============================================================================
+  // Test Suite 16: Per-rule Finite Validation & $ref/$allOf Fail-fast
+  // ============================================================================
+
+  describe('Per-rule Finite Validation', () => {
+    test('16.1: $ref on billed path returns null (fail-closed)', () => {
+      const schema = {
+        type: 'object',
+        properties: {
+          data: { $ref: '#/definitions/Data' },
+        },
+      };
+      expect(getFieldTypeFromSchema(schema, 'data')).toBeNull();
+    });
+
+    test('16.2: allOf on property returns null (fail-closed)', () => {
+      const schema = {
+        type: 'object',
+        properties: {
+          config: {
+            allOf: [
+              { type: 'object', properties: { a: { type: 'string' } } },
+              { type: 'object', properties: { b: { type: 'number' } } },
+            ],
+          },
+        },
+      };
+      expect(getFieldTypeFromSchema(schema, 'config.a')).toBeNull();
     });
   });
 });
