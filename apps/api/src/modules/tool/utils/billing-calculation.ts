@@ -624,10 +624,22 @@ export function getFieldTypeFromSchema(schema: any, fieldPath: string): string |
     // Resolve composite on the property itself (e.g., nullable array)
     if (current.oneOf || current.anyOf) {
       if (isArray) {
-        // For array tokens, find the array branch
-        const resolved = resolveCompositeForPath(current, remainingTokens);
-        if (!resolved) return null;
-        current = resolved;
+        // For array tokens we need a branch with `items` (an array branch).
+        // resolveCompositeForPath picks by property presence in remaining tokens,
+        // which would incorrectly prefer an object branch when both object and
+        // array branches expose the same property names (e.g. oneOf: [
+        //   {type:'object', properties:{duration:{type:'number'}}},
+        //   {type:'array', items:{properties:{duration:{type:'number'}}}}
+        // ]).  That leaves current.items undefined after this block → null return.
+        // Instead, find explicitly the first branch that has items AND whose items
+        // satisfy the remaining path.
+        const options: any[] = current.oneOf || current.anyOf;
+        const arrayBranch = options.find((opt: any) => {
+          if (!opt.items) return false;
+          return remainingTokens.length === 0 || canResolvePath(opt.items, remainingTokens);
+        });
+        if (!arrayBranch) return null;
+        current = arrayBranch;
       } else if (remainingTokens.length > 0) {
         // For non-array with remaining path, resolve for remaining path
         current = resolveCompositeForPath(current, remainingTokens);

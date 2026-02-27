@@ -1695,6 +1695,34 @@ describe('Dynamic Tool Billing - Calculation', () => {
       };
       expect(getFieldTypeFromSchema(schema, 'items[*].name')).toBe('string');
     });
+
+    test('12.11: object-or-array union — array token picks array branch over object branch', () => {
+      // Regression test for: when both object and array branches expose the same
+      // property names, resolveCompositeForPath used to pick the object branch
+      // (because canResolvePath matched via properties), leaving current.items
+      // undefined after the composite resolution → null return.
+      const schema = {
+        type: 'object',
+        properties: {
+          data: {
+            oneOf: [
+              { type: 'object', properties: { duration: { type: 'number' } } },
+              {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: { duration: { type: 'number' } },
+                },
+              },
+            ],
+          },
+        },
+      };
+      // Array path token must resolve through the array branch's items
+      expect(getFieldTypeFromSchema(schema, 'data[*].duration')).toBe('number');
+      // Non-array path should still pick the object branch
+      expect(getFieldTypeFromSchema(schema, 'data.duration')).toBe('number');
+    });
   });
 
   // ============================================================================
