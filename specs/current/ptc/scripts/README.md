@@ -14,15 +14,27 @@ Set the database URL via environment variable:
 export REFLY_DATABASE_URL_LOCAL="postgresql://user:pass@localhost:5432/refly"
 ```
 
-## ID formats
+## Parameters
 
-All scripts accept one of:
+All scripts accept:
 
-| Format | Meaning |
-|--------|---------|
-| `ar-...` | action result ID |
-| `sk-...` | skill result ID |
-| `c-...` | canvas ID (resolves to the latest result for that canvas) |
+```bash
+python <script>.py <id> [title] [--full]
+```
+
+| Parameter | Meaning |
+|-----------|---------|
+| `id` | Action result ID (`ar-...` / `sk-...`) or canvas ID (`c-...`) |
+| `title` | _(optional)_ Exact title match — narrows a canvas lookup to a specific result |
+| `--full` | Show full inputs/outputs without truncation |
+
+### ID / title resolution
+
+| `id` | `title` | Behaviour |
+|------|---------|-----------|
+| `ar-...` / `sk-...` | — | Fetches the latest version of that result |
+| `c-...` | — | Fetches the most recent result for that canvas |
+| `c-...` | provided | Fetches the most recent result in that canvas whose `title` matches exactly |
 
 ## Scripts
 
@@ -32,6 +44,7 @@ Shows per-call credit charges, discounts, and totals for an agent run.
 
 ```bash
 python ptc_debug_billing.py <id>
+python ptc_debug_billing.py <id> [title]
 python ptc_debug_billing.py <id> --full        # full details + toolset breakdown
 ```
 
@@ -51,6 +64,7 @@ Shows the full conversation and tool call timeline, including inputs and outputs
 
 ```bash
 python ptc_debug_calling.py <id>
+python ptc_debug_calling.py <id> [title]
 python ptc_debug_calling.py <id> --full        # show full inputs/outputs without truncation
 ```
 
@@ -72,6 +86,7 @@ Billing timeline plus consolidated correctness checks for a PTC run.
 
 ```bash
 python ptc_verify.py <id>
+python ptc_verify.py <id> [title]
 python ptc_verify.py <id> --full
 ```
 
@@ -88,21 +103,24 @@ python ptc_verify.py <id> --full
    - Unbilled completed calls
    - **Result line**: ✓ all passed / ✗ N issues found
 
-## Common options
-
-| Flag | Description |
-|------|-------------|
-| `--full` | Disable truncation; show full inputs/outputs and extra breakdown sections |
-
 ## Examples
 
 ```bash
-# Quick billing check on a canvas
+# Quick billing check on a canvas (latest result)
 python ptc_debug_billing.py c-abc123
+
+# Billing check for a specific result by title within a canvas
+python ptc_debug_billing.py c-abc123 "My workflow title"
 
 # Full calling trace for a specific result
 python ptc_debug_calling.py ar-xyz789 --full
 
+# Calling trace for a canvas result matched by title
+python ptc_debug_calling.py c-abc123 "My workflow title" --full
+
 # Verify PTC health for a skill result
 python ptc_verify.py sk-def456
+
+# Verify by canvas + title
+python ptc_verify.py c-abc123 "My workflow title"
 ```
