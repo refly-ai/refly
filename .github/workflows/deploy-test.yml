@@ -71,7 +71,7 @@ jobs:
     name: Build and Push Images
     runs-on: ubuntu-latest
     needs: linear-precheck
-    if: github.repository == 'refly-ai/refly' && needs.linear-precheck.outputs.should_deploy == 'true'
+    if: github.repository == 'refly-ai/refly'
     strategy:
       matrix:
         app: ["api", "web"]
@@ -181,12 +181,10 @@ jobs:
             PUBLIC_CLOUDFLARE_SITE_KEY=${{ vars.TEST_PUBLIC_CLOUDFLARE_SITE_KEY }}
 
       - name: Persist image tag for sync job
-        if: github.ref_name == 'main'
         run: |
           echo "${{ steps.docker_tags.outputs.image_tag }}" > image_tag.txt
 
       - name: Upload image tag artifact
-        if: github.ref_name == 'main'
         uses: actions/upload-artifact@v4
         with:
           name: image-tag-${{ matrix.app }}
@@ -197,7 +195,7 @@ jobs:
     name: Sync App Values (PR)
     runs-on: ubuntu-latest
     needs: [linear-precheck, build-push-images]
-    if: github.repository == 'refly-ai/refly' && needs.linear-precheck.outputs.should_deploy == 'true' && github.ref_name == 'main'
+    if: github.repository == 'refly-ai/refly' && needs.linear-precheck.outputs.should_deploy == 'true'
     steps:
       - name: Download image tag artifacts
         uses: actions/download-artifact@v4
