@@ -80,7 +80,19 @@ import { TbWorldSearch, TbWorldCog, TbInputSpark, TbBolt } from 'react-icons/tb'
 import { GrCircleQuestion } from 'react-icons/gr';
 import { AiOutlineLink } from 'react-icons/ai';
 import { HiOutlineTableCells } from 'react-icons/hi2';
-import { X, Claude, Gpt, Qwen, Deepseek, Gemini, Kimi, Grok, AIModel } from 'refly-icons';
+import {
+  X,
+  Claude,
+  Gpt,
+  Qwen,
+  Deepseek,
+  Gemini,
+  Kimi,
+  Grok,
+  Minimax,
+  GLM,
+  AIModel,
+} from 'refly-icons';
 import AutoIcon from '@refly-packages/ai-workspace-common/assets/auto-model.svg';
 import OpenAIIcon from '@refly-packages/ai-workspace-common/assets/openai.svg';
 import ClaudeIcon from '@refly-packages/ai-workspace-common/assets/claude.svg';
@@ -257,6 +269,12 @@ export const ModelIcon = ({ model, size }: { model: string; size: number }) => {
   }
   if (modelName.includes('deepseek')) {
     return <Deepseek size={size} />;
+  }
+  if (modelName.includes('minimax')) {
+    return <Minimax size={size} />;
+  }
+  if (modelName.includes('glm')) {
+    return <GLM size={size} />;
   }
   if (modelName.includes('gpt') || modelName.includes('openai')) {
     return <Gpt size={size} />;
