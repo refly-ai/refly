@@ -235,15 +235,18 @@ jobs:
             --arg apiTag "$API_TAG" \
             --arg webTag "$WEB_TAG" \
             '{
+              repository: "refly-ai/refly-infra",
               environment: $environment,
               syncMode: $syncMode,
               changes: [
                 {
                   application: "refly-api",
+                  valuesFilePath: "kubernetes/envs/test/refly-api/values.yaml",
                   valuesContent: ({image: {tag: $apiTag}} | tojson)
                 },
                 {
                   application: "refly-web",
+                  valuesFilePath: "kubernetes/envs/test/refly-web/values.yaml",
                   valuesContent: ({image: {tag: $webTag}} | tojson)
                 }
               ]
