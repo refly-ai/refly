@@ -7,6 +7,8 @@ import {
   WorkflowTask,
   WorkflowPlan,
   ModelInfo,
+  VariableValue,
+  WorkflowPatchOperation as OpenApiWorkflowPatchOperation,
 } from '@refly/openapi-schema';
 import { genNodeEntityId, genUniqueId } from '@refly/utils';
 import { CanvasNodeFilter } from './types';
@@ -162,7 +164,8 @@ export const workflowPlanPatchSchema = z.object({
 export type WorkflowTaskInput = z.infer<typeof workflowTaskSchema>;
 export type WorkflowVariableValue = z.infer<typeof workflowVariableValueSchema>;
 export type WorkflowVariableInput = z.infer<typeof workflowVariableSchema>;
-export type WorkflowPatchOperation = z.infer<typeof workflowPatchOperationSchema>;
+// Re-export the OpenAPI type for consistency across the codebase
+export type WorkflowPatchOperation = OpenApiWorkflowPatchOperation;
 export type WorkflowPlanPatch = z.infer<typeof workflowPlanPatchSchema>;
 
 // Result of applying patch operations
@@ -297,6 +300,7 @@ export const applyWorkflowPatchOperations = (
         }
         const existingVar = plan.variables![varIndex];
         if (data) {
+          const typedData = data as unknown as Partial<z.infer<typeof workflowPatchDataSchema>>;
           const updatedVar = {
             ...existingVar,
             ...(data.variableType !== undefined && {
@@ -310,8 +314,8 @@ export const applyWorkflowPatchOperations = (
             ...(data.resourceTypes !== undefined && {
               resourceTypes: data.resourceTypes,
             }),
-            ...(data.options !== undefined && { options: data.options }),
-            ...(data.isSingle !== undefined && { isSingle: data.isSingle }),
+            ...(typedData.options !== undefined && { options: typedData.options }),
+            ...(typedData.isSingle !== undefined && { isSingle: typedData.isSingle }),
             ...(data.value !== undefined && { value: data.value }),
           };
           // Validate the updated variable
@@ -422,28 +426,57 @@ export const normalizeWorkflowPlan = (plan: WorkflowPlan): WorkflowPlan => {
   };
 };
 
+/**
+ * Input type for variable conversion - accepts loose typing from patch operations
+ */
+interface PlanVariableInput {
+  variableId?: string;
+  name?: string;
+  value?: Array<{
+    type?: 'text' | 'resource' | string;
+    text?: string;
+    resource?: {
+      fileId?: string;
+      name?: string;
+      fileType?: 'document' | 'image' | 'video' | 'audio' | string;
+    };
+  }>;
+  description?: string;
+  variableType?: 'string' | 'option' | 'resource' | string;
+  required?: boolean;
+  resourceTypes?: Array<'document' | 'image' | 'video' | 'audio'>;
+  options?: string[];
+  isSingle?: boolean;
+}
+
 export const planVariableToWorkflowVariable = (
-  planVariable: WorkflowVariable,
-): WorkflowVariable => {
+  planVariable: PlanVariableInput,
+): WorkflowVariable | null => {
+  // Ensure required fields are present
+  if (!planVariable.variableId || !planVariable.name) {
+    return null;
+  }
+
   return {
     variableId: planVariable.variableId,
-    variableType: planVariable.variableType as 'string' | 'option' | 'resource',
+    variableType: (planVariable.variableType as 'string' | 'option' | 'resource') ?? 'string',
     name: planVariable.name,
-    value: planVariable.value?.map((value) => ({
-      type: value?.type as 'text' | 'resource',
-      text: value?.text,
-      // Only include resource if it has the required fields
-      ...(value?.resource?.name && value?.resource?.fileType
-        ? {
-            resource: {
-              ...(value.resource.fileId ? { fileId: value.resource.fileId } : {}),
-              name: value.resource.name,
-              fileType: value.resource.fileType,
-            },
-          }
-        : {}),
-    })),
-    description: planVariable.description,
+    value:
+      planVariable.value?.map((value) => ({
+        type: (value?.type as 'text' | 'resource') ?? 'text',
+        text: value?.text,
+        // Only include resource if it has the required fields
+        ...(value?.resource?.name && value?.resource?.fileType
+          ? {
+              resource: {
+                ...(value.resource.fileId ? { fileId: value.resource.fileId } : {}),
+                name: value.resource.name,
+                fileType: value.resource.fileType as 'document' | 'image' | 'video' | 'audio',
+              },
+            }
+          : {}),
+      })) ?? [],
+    description: planVariable.description ?? '',
     required: planVariable.required ?? false,
     resourceTypes: planVariable.resourceTypes,
     options: planVariable.options,
@@ -582,6 +615,7 @@ export const generateCanvasDataFromWorkflowPlan = (
             contextItems: [],
             status: 'init',
             modelInfo: defaultModel,
+            taskId, // Store taskId for incremental editing mapping
           },
         },
       };
@@ -633,6 +667,330 @@ export const generateCanvasDataFromWorkflowPlan = (
   return {
     nodes,
     edges,
-    variables: workflowPlan.variables?.map(planVariableToWorkflowVariable),
+    variables: workflowPlan.variables
+      ?.map(planVariableToWorkflowVariable)
+      .filter((v): v is WorkflowVariable => v !== null),
+  };
+};
+
+/**
+ * Variable operation returned from incremental changes for the caller to handle
+ */
+export interface VariableOperation {
+  type: 'create' | 'update' | 'delete';
+  variableId?: string;
+  variable?: WorkflowVariable;
+  data?: Partial<WorkflowVariable>;
+}
+
+/**
+ * Result of applying incremental changes to canvas
+ */
+export interface IncrementalChangesResult {
+  nodes: CanvasNode[];
+  edges: RawCanvasData['edges'];
+  affectedNodeIds: string[];
+  variableOperations: VariableOperation[];
+}
+
+/**
+ * Apply incremental patch operations to existing canvas data.
+ * This function preserves unchanged nodes and only modifies affected ones.
+ *
+ * @param operations - Array of patch operations to apply
+ * @param currentNodes - Current canvas nodes
+ * @param currentEdges - Current canvas edges
+ * @param toolsets - Available toolsets for node creation
+ * @param options - Optional configuration
+ * @returns Updated nodes, edges, and list of affected node IDs
+ */
+export const applyIncrementalChangesToCanvas = (
+  operations: WorkflowPatchOperation[],
+  currentNodes: CanvasNode[],
+  currentEdges: RawCanvasData['edges'],
+  toolsets: GenericToolset[],
+  options?: { defaultModel?: ModelInfo },
+): IncrementalChangesResult => {
+  // Build taskId -> node mapping from current nodes
+  const taskIdToNode = new Map<string, CanvasNode>();
+  const taskIdToNodeId = new Map<string, string>();
+  const taskIdToEntityId = new Map<string, string>();
+
+  for (const node of currentNodes) {
+    const metadata = node.data?.metadata;
+    const taskId = metadata?.taskId as string | undefined;
+    if (taskId) {
+      taskIdToNode.set(taskId, node);
+      taskIdToNodeId.set(taskId, node.id);
+      if (node.data?.entityId) {
+        taskIdToEntityId.set(taskId, node.data.entityId);
+      }
+    }
+  }
+
+  let nodes = [...currentNodes];
+  let edges = [...currentEdges];
+  const affectedNodeIds: string[] = [];
+  const variableOperations: VariableOperation[] = [];
+
+  for (const operation of operations) {
+    const { op, title: _title, taskId, task, variableId, variable, data } = operation;
+
+    switch (op) {
+      case 'updateTitle': {
+        // Title updates don't affect canvas nodes (title is used at plan level, not canvas)
+        break;
+      }
+
+      case 'createTask': {
+        if (!task) break;
+
+        const newTaskId = task.id ?? `task-${genUniqueId()}`;
+        const taskTitle = task.title ?? '';
+        const taskPrompt = task.prompt ?? '';
+
+        // Build selected toolsets metadata
+        const selectedToolsets: GenericToolset[] = [];
+        if (Array.isArray(task.toolsets)) {
+          for (const toolsetId of task.toolsets) {
+            const toolset =
+              toolsets?.find((t) => t.id === toolsetId) ||
+              toolsets?.find((t) => t.toolset?.key === toolsetId);
+            if (toolset) {
+              selectedToolsets.push(toolset);
+            }
+          }
+        }
+
+        // Create connection filters for dependent tasks
+        const connectTo: CanvasNodeFilter[] = [];
+        if (Array.isArray(task.dependentTasks)) {
+          for (const dependentTaskId of task.dependentTasks) {
+            const dependentEntityId = taskIdToEntityId.get(dependentTaskId);
+            if (dependentEntityId) {
+              connectTo.push({
+                type: 'skillResponse',
+                entityId: dependentEntityId,
+                handleType: 'source',
+              });
+            }
+          }
+        }
+
+        // Generate entity ID for the new node
+        const taskEntityId = genNodeEntityId('skillResponse');
+        taskIdToEntityId.set(newTaskId, taskEntityId);
+
+        // Replace task agent mentions with actual entity IDs
+        const normalizedPrompt = replaceTaskAgentMentions(taskPrompt, taskIdToEntityId);
+
+        const nodeData: Partial<CanvasNode> = {
+          type: 'skillResponse',
+          data: {
+            title: taskTitle,
+            editedTitle: taskTitle,
+            entityId: taskEntityId,
+            contentPreview: '',
+            metadata: {
+              query: normalizedPrompt,
+              selectedToolsets,
+              contextItems: [],
+              status: 'init',
+              modelInfo: options?.defaultModel,
+              taskId: newTaskId,
+            },
+          },
+        };
+
+        // Use prepareAddNode to calculate proper position
+        const { newNode } = prepareAddNode({
+          node: nodeData,
+          nodes: nodes as any[],
+          edges: edges as any[],
+          connectTo,
+          autoLayout: true,
+        });
+
+        nodes.push(newNode);
+        taskIdToNode.set(newTaskId, newNode);
+        taskIdToNodeId.set(newTaskId, newNode.id);
+        affectedNodeIds.push(newNode.id);
+
+        // Create edges from dependent tasks
+        if (Array.isArray(task.dependentTasks)) {
+          for (const dependentTaskId of task.dependentTasks) {
+            const sourceNodeId = taskIdToNodeId.get(dependentTaskId);
+            if (sourceNodeId && sourceNodeId !== newNode.id) {
+              const edgeExists = edges.some(
+                (edge) => edge.source === sourceNodeId && edge.target === newNode.id,
+              );
+              if (!edgeExists) {
+                edges.push({
+                  id: `edge-${genUniqueId()}`,
+                  source: sourceNodeId,
+                  target: newNode.id,
+                  type: 'default',
+                });
+              }
+            }
+          }
+        }
+        break;
+      }
+
+      case 'updateTask': {
+        if (!taskId || !data) break;
+
+        const node = taskIdToNode.get(taskId);
+        if (!node) break;
+
+        // Create a deep copy of the node to avoid mutation
+        // Using structuredClone for proper deep cloning (preserves types better than JSON.parse/stringify)
+        const updatedNode = structuredClone(node) as CanvasNode;
+        const nodeData = updatedNode.data as CanvasNode['data'] & {
+          metadata?: Record<string, unknown>;
+        };
+
+        // Update title if provided
+        if (data.title !== undefined) {
+          nodeData.title = data.title;
+          nodeData.editedTitle = data.title;
+        }
+
+        // Update metadata fields
+        if (nodeData.metadata) {
+          // Update prompt
+          if (data.prompt !== undefined) {
+            const normalizedPrompt = replaceTaskAgentMentions(data.prompt, taskIdToEntityId);
+            nodeData.metadata.query = normalizedPrompt;
+          }
+
+          // Update toolsets
+          if (data.toolsets !== undefined) {
+            const selectedToolsets: GenericToolset[] = [];
+            for (const toolsetId of data.toolsets) {
+              const toolset =
+                toolsets?.find((t) => t.id === toolsetId) ||
+                toolsets?.find((t) => t.toolset?.key === toolsetId);
+              if (toolset) {
+                selectedToolsets.push(toolset);
+              }
+            }
+            nodeData.metadata.selectedToolsets = selectedToolsets;
+          }
+        }
+
+        // Replace node in the array
+        nodes = nodes.map((n) => (n.id === node.id ? updatedNode : n));
+        taskIdToNode.set(taskId, updatedNode);
+        affectedNodeIds.push(node.id);
+
+        // Handle dependency changes
+        if (data.dependentTasks !== undefined) {
+          // Remove old edges pointing to this node
+          edges = edges.filter((edge) => edge.target !== node.id);
+
+          // Create new edges for updated dependencies
+          for (const dependentTaskId of data.dependentTasks) {
+            const sourceNodeId = taskIdToNodeId.get(dependentTaskId);
+            if (sourceNodeId && sourceNodeId !== node.id) {
+              edges.push({
+                id: `edge-${genUniqueId()}`,
+                source: sourceNodeId,
+                target: node.id,
+                type: 'default',
+              });
+            }
+          }
+        }
+        break;
+      }
+
+      case 'deleteTask': {
+        if (!taskId) break;
+
+        const node = taskIdToNode.get(taskId);
+        if (!node) break;
+
+        // Remove node from the array
+        nodes = nodes.filter((n) => n.id !== node.id);
+
+        // Remove all edges connected to this node
+        edges = edges.filter((edge) => edge.source !== node.id && edge.target !== node.id);
+
+        // Clean up mappings
+        taskIdToNode.delete(taskId);
+        taskIdToNodeId.delete(taskId);
+        taskIdToEntityId.delete(taskId);
+        break;
+      }
+
+      case 'createVariable': {
+        if (variable) {
+          const convertedVariable = planVariableToWorkflowVariable(variable);
+          if (convertedVariable) {
+            variableOperations.push({
+              type: 'create',
+              variable: convertedVariable,
+            });
+          }
+        }
+        break;
+      }
+
+      case 'updateVariable': {
+        if (variableId && data) {
+          // Convert value array to ensure proper typing
+          const convertedValue: VariableValue[] | undefined = data.value?.map((v) => {
+            const result: VariableValue = {
+              type: (v?.type as 'text' | 'resource') ?? 'text',
+              text: v?.text,
+            };
+            // Only include resource if it has the required fields
+            if (v?.resource?.name && v?.resource?.fileType) {
+              result.resource = {
+                name: v.resource.name,
+                fileType: v.resource.fileType as 'document' | 'image' | 'video' | 'audio',
+              };
+            }
+            return result;
+          });
+
+          const updateData: Partial<WorkflowVariable> = {};
+          if (data.name !== undefined) updateData.name = data.name;
+          if (data.description !== undefined) updateData.description = data.description;
+          if (data.variableType !== undefined) {
+            updateData.variableType = data.variableType as 'string' | 'option' | 'resource';
+          }
+          if (data.required !== undefined) updateData.required = data.required;
+          if (data.resourceTypes !== undefined) updateData.resourceTypes = data.resourceTypes;
+          if (convertedValue !== undefined) updateData.value = convertedValue;
+
+          variableOperations.push({
+            type: 'update',
+            variableId,
+            data: updateData,
+          });
+        }
+        break;
+      }
+
+      case 'deleteVariable': {
+        if (variableId) {
+          variableOperations.push({
+            type: 'delete',
+            variableId,
+          });
+        }
+        break;
+      }
+    }
+  }
+
+  return {
+    nodes,
+    edges,
+    affectedNodeIds,
+    variableOperations,
   };
 };

@@ -43,8 +43,11 @@ import {
   UpsertDriveFileRequest,
   WorkflowPlan,
   WorkflowPlanRecord,
+  WorkflowPatchOperation,
+  CanvasNode,
+  CanvasEdge,
+  WorkflowVariable,
 } from '@refly/openapi-schema';
-import type { WorkflowPatchOperation } from '@refly/canvas-common';
 import { Document as LangChainDocument } from '@langchain/core/documents';
 
 export interface ReflyService {
@@ -197,4 +200,19 @@ export interface ReflyService {
     user: User,
     params: { planId: string },
   ) => Promise<WorkflowPlanRecord | null>;
+  getLatestWorkflowPlanByCanvas: (
+    user: User,
+    params: { canvasId: string },
+  ) => Promise<WorkflowPlanRecord | null>;
+
+  // Canvas data retrieval
+  getCanvasData: (
+    user: User,
+    params: { canvasId: string },
+  ) => Promise<{
+    title: string;
+    nodes: CanvasNode[];
+    edges: CanvasEdge[];
+    variables?: WorkflowVariable[];
+  }>;
 }

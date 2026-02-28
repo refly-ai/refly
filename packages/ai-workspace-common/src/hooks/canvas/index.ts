@@ -38,6 +38,7 @@ export * from './use-schedule-dependency-check';
 
 // Selection and edge operations
 export * from './use-node-selection';
+export * from './use-node-edit-context';
 export * from './use-edge-operations';
 export * from './use-node-preview-control';
 export * from './use-variable-view';

@@ -129,6 +129,7 @@ export class Agent extends BaseSkill {
       mode === 'copilot_agent'
         ? buildWorkflowCopilotPrompt({
             installedToolsets: config.configurable.installedToolsets ?? [],
+            nodeEditContext: config.configurable.nodeEditContext,
             webSearchEnabled: config.configurable.webSearchEnabled ?? false,
           })
         : buildNodeAgentSystemPrompt({ ptcEnabled, ptcContext });

@@ -8,6 +8,7 @@ import {
   GenerateWorkflow,
   PatchWorkflow,
   GetWorkflowSummary,
+  GetCanvasSnapshot,
   builtinToolsetInventory,
   toolsetInventory,
 } from '@refly/agent-tools';
@@ -1175,6 +1176,7 @@ export class ToolService {
     const generateWorkflow = new GenerateWorkflow(params);
     const patchWorkflow = new PatchWorkflow(params);
     const getWorkflowSummary = new GetWorkflowSummary(params);
+    const getCanvasSnapshot = new GetCanvasSnapshot(params);
 
     // Add read_file and list_files tools for Copilot to directly read file content
     const builtinToolset = new BuiltinToolset(params);
@@ -1213,6 +1215,18 @@ export class ToolService {
         func: getWorkflowSummary.invoke.bind(getWorkflowSummary),
         metadata: {
           name: getWorkflowSummary.name,
+          type: 'copilot',
+          toolsetKey: 'copilot',
+          toolsetName: 'Copilot',
+        },
+      }),
+      new DynamicStructuredTool({
+        name: 'copilot_get_canvas_snapshot',
+        description: getCanvasSnapshot.description,
+        schema: getCanvasSnapshot.schema,
+        func: getCanvasSnapshot.invoke.bind(getCanvasSnapshot),
+        metadata: {
+          name: getCanvasSnapshot.name,
           type: 'copilot',
           toolsetKey: 'copilot',
           toolsetName: 'Copilot',

@@ -3234,6 +3234,7 @@ const translations = {
         readFile: 'Reading',
         listFiles: 'Browsing file list',
         copilotSummary: 'Reading workflow summary',
+        copilotSnapshot: 'Reading canvas snapshot',
         readAgentResult: 'Reading result:',
         readToolResult: 'Reading tool output:',
       },

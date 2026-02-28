@@ -342,6 +342,8 @@ export class SkillInvokerService {
         resultId: data.result?.resultId,
         version: data.result?.version,
         canvasId: data.target?.entityType === 'canvas' ? data.target?.entityId : undefined,
+        copilotSessionId: data.copilotSessionId,
+        nodeEditContext: data.nodeEditContext,
       },
     };
 

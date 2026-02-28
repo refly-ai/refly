@@ -5555,6 +5555,10 @@ export const InvokeSkillRequestSchema = {
       type: 'string',
       description: 'Workflow node execution ID for workflow context',
     },
+    nodeEditContext: {
+      description: 'Context for targeted node editing in copilot',
+      $ref: '#/components/schemas/NodeEditContext',
+    },
   },
 } as const;
 
@@ -9853,6 +9857,115 @@ export const WorkflowPlanSchema = {
   },
 } as const;
 
+export const WorkflowPatchOpSchema = {
+  type: 'string',
+  description: 'Type of patch operation to apply to a workflow plan',
+  enum: [
+    'updateTitle',
+    'createTask',
+    'updateTask',
+    'deleteTask',
+    'createVariable',
+    'updateVariable',
+    'deleteVariable',
+  ],
+} as const;
+
+export const WorkflowPatchDataSchema = {
+  type: 'object',
+  description: 'Data for updating a task or variable',
+  properties: {
+    title: {
+      type: 'string',
+      description: 'New display title for the task',
+    },
+    prompt: {
+      type: 'string',
+      description: 'New prompt or instruction for this task',
+    },
+    dependentTasks: {
+      type: 'array',
+      items: {
+        type: 'string',
+      },
+      description: 'New list of task IDs that must execute before this task',
+    },
+    toolsets: {
+      type: 'array',
+      items: {
+        type: 'string',
+      },
+      description: 'New list of toolset IDs for this task',
+    },
+    variableType: {
+      type: 'string',
+      enum: ['string', 'resource'],
+      description: 'New variable type',
+    },
+    name: {
+      type: 'string',
+      description: 'New variable name',
+    },
+    description: {
+      type: 'string',
+      description: 'New variable description',
+    },
+    required: {
+      type: 'boolean',
+      description: 'Whether this variable is required',
+    },
+    resourceTypes: {
+      type: 'array',
+      items: {
+        $ref: '#/components/schemas/VariableResourceType',
+      },
+      description: 'New accepted resource types',
+    },
+    value: {
+      type: 'array',
+      items: {
+        $ref: '#/components/schemas/VariableValue',
+      },
+      description: 'New variable values',
+    },
+  },
+} as const;
+
+export const WorkflowPatchOperationSchema = {
+  type: 'object',
+  description: 'A single patch operation for modifying a workflow plan',
+  required: ['op'],
+  properties: {
+    op: {
+      $ref: '#/components/schemas/WorkflowPatchOp',
+    },
+    title: {
+      type: 'string',
+      description: 'New workflow title (for updateTitle operation)',
+    },
+    taskId: {
+      type: 'string',
+      description: 'ID of the task to update or delete (for updateTask, deleteTask)',
+    },
+    task: {
+      $ref: '#/components/schemas/WorkflowTask',
+      description: 'Task definition (for createTask operation)',
+    },
+    variableId: {
+      type: 'string',
+      description: 'ID of the variable to update or delete (for updateVariable, deleteVariable)',
+    },
+    variable: {
+      $ref: '#/components/schemas/WorkflowVariable',
+      description: 'Variable definition (for createVariable operation)',
+    },
+    data: {
+      $ref: '#/components/schemas/WorkflowPatchData',
+      description: 'Update data (for updateTask, updateVariable operations)',
+    },
+  },
+} as const;
+
 export const WorkflowPlanRecordSchema = {
   allOf: [
     {
@@ -9869,6 +9982,14 @@ export const WorkflowPlanRecordSchema = {
           type: 'number',
           description: 'Workflow plan version',
         },
+        patchOperations: {
+          type: 'array',
+          description:
+            'Array of patch operations applied to create this version (only present for patched plans)',
+          items: {
+            $ref: '#/components/schemas/WorkflowPatchOperation',
+          },
+        },
         createdAt: {
           type: 'string',
           format: 'date-time',
@@ -9882,6 +10003,77 @@ export const WorkflowPlanRecordSchema = {
       },
     },
   ],
+} as const;
+
+export const NodeEditContextSchema = {
+  type: 'object',
+  description:
+    'Context for targeted node editing in Copilot. When a user selects a node, this captures relevant information to enable targeted edits.',
+  required: ['nodeId', 'entityId', 'taskId', 'nodeType', 'editMode'],
+  properties: {
+    nodeId: {
+      type: 'string',
+      description: 'The internal node ID from ReactFlow',
+    },
+    entityId: {
+      type: 'string',
+      description: 'The entity ID used for referencing in workflows',
+    },
+    taskId: {
+      type: 'string',
+      description: 'The task ID from workflow plan, used for patch operations',
+    },
+    nodeType: {
+      $ref: '#/components/schemas/CanvasNodeType',
+      description: 'The type of the selected node',
+    },
+    currentState: {
+      type: 'object',
+      description: 'Current state of the node that can be edited',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'The current query/prompt of the node',
+        },
+        toolsets: {
+          type: 'array',
+          items: {
+            type: 'string',
+          },
+          description: 'The current toolsets configured on the node',
+        },
+        title: {
+          type: 'string',
+          description: 'The current title of the node',
+        },
+      },
+    },
+    graphContext: {
+      type: 'object',
+      description: 'Graph context showing upstream and downstream dependencies',
+      properties: {
+        upstreamTaskIds: {
+          type: 'array',
+          items: {
+            type: 'string',
+          },
+          description: 'Task IDs of nodes that feed into this node',
+        },
+        downstreamTaskIds: {
+          type: 'array',
+          items: {
+            type: 'string',
+          },
+          description: 'Task IDs of nodes that this node feeds into',
+        },
+      },
+    },
+    editMode: {
+      type: 'string',
+      enum: ['modify', 'extend'],
+      description: 'The edit mode - modify the current node or extend from it',
+    },
+  },
 } as const;
 
 export const GetWorkflowPlanDetailResponseSchema = {
