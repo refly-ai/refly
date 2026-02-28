@@ -31,6 +31,51 @@ const USD_TO_CREDITS_RATE = (() => {
 })();
 
 /**
+ * Strict decimal-only regex for numeric coercion in tier matching.
+ * Matches: "10", "10.5", "-3.14", "0.001"
+ * Rejects: "0x1A", "", "true", " ", "1e5"
+ */
+const DECIMAL_RE = /^-?\d+(\.\d+)?$/;
+
+/**
+ * Compare a runtime value against a tier value with strict-decimal-only coercion.
+ *
+ * Covers:
+ * - string↔number: "10" matches 10 and vice versa (decimal strings only)
+ * - string↔boolean: "true" matches true, "false" matches false
+ * - No hex, empty string, or whitespace false positives
+ */
+function matchesTierValue(runtimeValue: unknown, tierValue: string | number | boolean): boolean {
+  // Exact match first (handles same-type comparisons)
+  if (runtimeValue === tierValue) return true;
+
+  const rv = typeof runtimeValue === 'string' ? runtimeValue.trim() : runtimeValue;
+  const tv = tierValue;
+
+  // string ↔ number coercion (decimal-only)
+  if (typeof rv === 'string' && typeof tv === 'number') {
+    return DECIMAL_RE.test(rv) && Number(rv) === tv;
+  }
+  if (typeof rv === 'number' && typeof tv === 'string') {
+    return DECIMAL_RE.test(tv.trim()) && rv === Number(tv.trim());
+  }
+
+  // string ↔ boolean coercion
+  if (typeof rv === 'string' && typeof tv === 'boolean') {
+    if (rv === 'true') return tv === true;
+    if (rv === 'false') return tv === false;
+    return false;
+  }
+  if (typeof rv === 'boolean' && typeof tv === 'string') {
+    if (tv === 'true') return rv === true;
+    if (tv === 'false') return rv === false;
+    return false;
+  }
+
+  return false;
+}
+
+/**
  * Calculate credits from billing rules
  *
  * @param config - Tool billing configuration with rules and optional token pricing
@@ -81,6 +126,34 @@ export async function calculateCreditsFromRules(
       throw new Error(`Field ${rule.fieldPath} not found in ${rule.phase} schema`);
     }
 
+    // Validate unitField exists in the correct phase schema (fail-closed)
+    if (rule.unitField) {
+      // Normalize unitPhase the same way extraction does
+      const effectiveUnitPhase =
+        rule.unitPhase === 'input' || rule.unitPhase === 'output' ? rule.unitPhase : rule.phase;
+      const unitSchemaJson = effectiveUnitPhase === 'input' ? requestSchema : responseSchema;
+      // Only parse the unit phase schema if it's different from the already-parsed one
+      let unitSchema: any;
+      if (unitSchemaJson === schemaJson) {
+        unitSchema = schema;
+      } else {
+        try {
+          unitSchema = JSON.parse(unitSchemaJson);
+        } catch (error) {
+          throw new Error(
+            `Invalid ${effectiveUnitPhase} schema JSON for unitField: ${error.message}`,
+          );
+        }
+      }
+      const unitFieldType = getFieldTypeFromSchema(unitSchema, rule.unitField);
+      if (!unitFieldType) {
+        throw new Error(
+          `unitField "${rule.unitField}" not found in ${effectiveUnitPhase} schema ` +
+            `(rule fieldPath: ${rule.fieldPath})`,
+        );
+      }
+    }
+
     // Validate no tiers on aggregated fields
     const isAggregated = rule.fieldPath.includes('[*]');
     if (rule.pricingTiers && rule.pricingTiers.length > 0 && isAggregated) {
@@ -102,7 +175,7 @@ export async function calculateCreditsFromRules(
       value !== undefined &&
       value !== null
     ) {
-      const tier = rule.pricingTiers.find((t) => t.value === value);
+      const tier = rule.pricingTiers.find((t) => matchesTierValue(value, t.value));
       if (tier) {
         creditsPerUnit = tier.creditsPerUnit;
       }
@@ -146,6 +219,15 @@ export async function calculateCreditsFromRules(
     } else {
       // Standard credit-based pricing
       credits = units * creditsPerUnit;
+    }
+
+    // Per-rule finite validation — fail with actionable context
+    if (!Number.isFinite(credits)) {
+      throw new Error(
+        `Non-finite credits computed for rule (fieldPath: ${rule.fieldPath}, ` +
+          `unitField: ${rule.unitField || 'N/A'}, category: ${rule.category}, ` +
+          `units: ${units}, creditsPerUnit: ${creditsPerUnit}): ${credits}`,
+      );
     }
 
     // Add to category total
@@ -341,7 +423,7 @@ function extractAndAggregateValue(
     // Aggregate based on category
     if (category === 'text') {
       return values.join(' '); // Concatenate for token counting
-    } else if (category === 'image' || category === 'audio') {
+    } else if (category === 'image' || category === 'audio' || category === 'video') {
       return values; // Return array for counting/summing
     }
 
@@ -353,15 +435,153 @@ function extractAndAggregateValue(
 }
 
 /**
+ * Determine the effective type of a JSON schema node.
+ *
+ * Handles:
+ * - Standard `type` string
+ * - `type` arrays (e.g., `["string", "null"]` → returns non-null type or `'union'`)
+ * - `const` / `enum`-only nodes (infers type from value)
+ * - Nodes with only `oneOf`/`anyOf` (returns `'composite'`)
+ *
+ * @returns The type string, `'composite'`, `'union'`, or `null` if undetermined.
+ */
+function getSchemaNodeType(node: any): string | null {
+  if (!node || typeof node !== 'object') return null;
+
+  // Standard type field
+  if (typeof node.type === 'string') return node.type;
+
+  // Type array — e.g., ["string", "null"]
+  if (Array.isArray(node.type)) {
+    const nonNull = node.type.filter((t: string) => t !== 'null');
+    if (nonNull.length === 1) return nonNull[0];
+    if (nonNull.length > 1) return 'union';
+    return 'null';
+  }
+
+  // const-only node
+  if (node.const !== undefined) return typeof node.const;
+
+  // enum-only node — infer from first value
+  if (Array.isArray(node.enum) && node.enum.length > 0) {
+    return typeof node.enum[0];
+  }
+
+  // Composite keywords present
+  if (node.oneOf || node.anyOf) return 'composite';
+
+  return null;
+}
+
+/**
+ * Normalize a path token — strip array brackets.
+ * "images[*]" → { fieldName: "images", isArray: true }
+ * "config"   → { fieldName: "config", isArray: false }
+ */
+function parsePathToken(token: string): { fieldName: string; isArray: boolean } {
+  const m = token.match(/^(.+)\[(\*|\d+)\]$/);
+  if (m) return { fieldName: m[1], isArray: true };
+  return { fieldName: token, isArray: false };
+}
+
+/**
+ * Resolve a composite (`oneOf`/`anyOf`) schema node by selecting the branch
+ * that can satisfy the remaining field path.
+ *
+ * Uses path-aware resolution: iterates ALL branches and picks the first one
+ * whose sub-tree contains the remaining path. This avoids the bug where
+ * `.find()` would stop at the first array-like branch even if it doesn't
+ * satisfy the full path.
+ *
+ * @returns The resolved branch schema, or `null` if no branch matches.
+ */
+function resolveCompositeForPath(node: any, remainingTokens: string[]): any {
+  const options: any[] = node.oneOf || node.anyOf;
+  if (!options || options.length === 0) return null;
+
+  // If no remaining path, pick the first non-null branch
+  if (remainingTokens.length === 0) {
+    const nonNull = options.filter(
+      (opt: any) =>
+        !(
+          opt.type === 'null' ||
+          (Array.isArray(opt.type) && opt.type.length === 1 && opt.type[0] === 'null')
+        ),
+    );
+    return nonNull.length > 0 ? nonNull[0] : options[0];
+  }
+
+  // Path-aware: find the branch that can resolve the remaining path
+  for (const branch of options) {
+    if (canResolvePath(branch, remainingTokens)) {
+      return branch;
+    }
+  }
+
+  // Fallback: first non-null branch (may still fail downstream)
+  const nonNull = options.filter(
+    (opt: any) =>
+      !(
+        opt.type === 'null' ||
+        (Array.isArray(opt.type) && opt.type.length === 1 && opt.type[0] === 'null')
+      ),
+  );
+  return nonNull.length > 0 ? nonNull[0] : null;
+}
+
+/**
+ * Check whether a schema node can resolve the given path tokens.
+ * Used by `resolveCompositeForPath` to pick the correct branch.
+ */
+function canResolvePath(node: any, tokens: string[]): boolean {
+  if (!node || typeof node !== 'object') return false;
+  if (tokens.length === 0) return true;
+
+  // Resolve nested composites first
+  if (node.oneOf || node.anyOf) {
+    const opts: any[] = node.oneOf || node.anyOf;
+    return opts.some((opt: any) => canResolvePath(opt, tokens));
+  }
+
+  const [head, ...tail] = tokens;
+  const { fieldName, isArray } = parsePathToken(head);
+
+  // Property access
+  const prop = node.properties?.[fieldName];
+  if (!prop) return false;
+
+  if (isArray) {
+    // Need to descend into items — but prop may be composite (nullable array)
+    const arrayNode = prop;
+    if (arrayNode.oneOf || arrayNode.anyOf) {
+      const opts: any[] = arrayNode.oneOf || arrayNode.anyOf;
+      // Find an array branch whose items can resolve the tail
+      return opts.some((opt: any) => {
+        if (opt.items) return canResolvePath(opt.items, tail);
+        return false;
+      });
+    }
+    if (!arrayNode.items) return false;
+    return canResolvePath(arrayNode.items, tail);
+  }
+
+  // Non-array: descend into the property
+  return canResolvePath(prop, tail);
+}
+
+/**
  * Get field type from JSON schema
  *
  * Supports:
  * - properties traversal
  * - items traversal for arrays
  * - Array notation: field[*], field[0]
+ * - oneOf / anyOf composites (path-aware branch selection)
+ * - Nullable types via type arrays (e.g., ["string", "null"])
  *
  * Does NOT support:
- * - $ref, oneOf, allOf (fail fast with null)
+ * - $ref (fail fast with null)
+ * - allOf (fail fast with null)
  *
  * @param schema - JSON schema object
  * @param fieldPath - Field path in dot notation
@@ -372,29 +592,74 @@ export function getFieldTypeFromSchema(schema: any, fieldPath: string): string |
     return null;
   }
 
-  // Convert dataPath to schema path
-  const pathParts = fieldPath.split('.');
+  // Fail fast on $ref and allOf — unsupported
+  if (schema.$ref || schema.allOf) {
+    return null;
+  }
 
+  const pathParts = fieldPath.split('.');
   let current = schema;
 
-  for (const part of pathParts) {
-    // Handle array notation: "images[*]" or "contents[0]"
-    const arrayMatch = part.match(/^(.+)\[(\*|\d+)\]$/);
+  for (let i = 0; i < pathParts.length; i++) {
+    const part = pathParts[i];
+    const remainingTokens = pathParts.slice(i + 1);
 
-    if (arrayMatch) {
-      const fieldName = arrayMatch[1];
-      current = current.properties?.[fieldName];
+    // Resolve composite before property descent
+    if (current.oneOf || current.anyOf) {
+      current = resolveCompositeForPath(current, [part, ...remainingTokens]);
       if (!current) return null;
+    }
 
+    // Fail fast on unsupported constructs at any level
+    if (current.$ref || current.allOf) {
+      return null;
+    }
+
+    const { fieldName, isArray } = parsePathToken(part);
+
+    // Property access
+    current = current.properties?.[fieldName];
+    if (!current) return null;
+
+    // Resolve composite on the property itself (e.g., nullable array)
+    if (current.oneOf || current.anyOf) {
+      if (isArray) {
+        // For array tokens we need a branch with `items` (an array branch).
+        // resolveCompositeForPath picks by property presence in remaining tokens,
+        // which would incorrectly prefer an object branch when both object and
+        // array branches expose the same property names (e.g. oneOf: [
+        //   {type:'object', properties:{duration:{type:'number'}}},
+        //   {type:'array', items:{properties:{duration:{type:'number'}}}}
+        // ]).  That leaves current.items undefined after this block → null return.
+        // Instead, find explicitly the first branch that has items AND whose items
+        // satisfy the remaining path.
+        const options: any[] = current.oneOf || current.anyOf;
+        const arrayBranch = options.find((opt: any) => {
+          if (!opt.items) return false;
+          return remainingTokens.length === 0 || canResolvePath(opt.items, remainingTokens);
+        });
+        if (!arrayBranch) return null;
+        current = arrayBranch;
+      } else if (remainingTokens.length > 0) {
+        // For non-array with remaining path, resolve for remaining path
+        current = resolveCompositeForPath(current, remainingTokens);
+        if (!current) return null;
+      }
+      // If no remaining path and not array, let it fall through to type resolution at end
+    }
+
+    if (isArray) {
       // Move to items schema for array
       current = current.items;
-      if (!current) return null;
-    } else {
-      // Regular property access
-      current = current.properties?.[part];
       if (!current) return null;
     }
   }
 
-  return current.type || null;
+  // Final node: resolve composite if needed
+  if (current.oneOf || current.anyOf) {
+    const resolved = resolveCompositeForPath(current, []);
+    if (resolved) current = resolved;
+  }
+
+  return getSchemaNodeType(current);
 }
