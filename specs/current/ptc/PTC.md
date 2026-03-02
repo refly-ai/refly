@@ -221,9 +221,18 @@ Controls whether PTC is enabled. Default: `off`.
 | `partial` | PTC enabled only for users in `PTC_USER_ALLOWLIST` |
 
 ### PTC_DEBUG
-Default: disabled (empty string). Set to `true` to enable.
+Default: disabled (empty string).
 
-When `true`, overrides the `PTC_MODE` decision — PTC activates only on agent nodes whose **title contains "ptc"** (case-insensitive). Also injects `REFLY_PTC_DEBUG=true` into the sandbox environment.
+A secondary filter applied **after** `PTC_MODE` + `PTC_USER_ALLOWLIST` have been evaluated. If those checks disable PTC for the user, `PTC_DEBUG` has no effect.
+
+| Value | Behaviour |
+|-------|-----------|
+| unset / empty | No debug filtering; PTC_MODE + allowlist decide entirely |
+| `opt-in` | PTC on only for nodes whose title contains `"useptc"` (case-insensitive) |
+| `opt-out` | PTC on for all nodes except those whose title contains `"nonptc"` (case-insensitive) |
+| `true` | Legacy alias for `opt-in` |
+
+When any non-empty value is set, `REFLY_PTC_DEBUG=true` is injected into the sandbox environment.
 
 ### PTC_USER_ALLOWLIST
 Comma-separated user IDs (e.g. `u-user1,u-user2`). Only used when `PTC_MODE=partial`.
@@ -246,16 +255,23 @@ PTC_MODE=on
 PTC_MODE=off
 ```
 
-#### 3. Testing — Selective Users
+#### 3. Testing — Selective Users + Opt-out Debug
 ```env
 PTC_MODE=partial
 PTC_USER_ALLOWLIST=u-user1,u-user2
+PTC_DEBUG=opt-out
 ```
 
-#### 4. Local Dev — Debug Mode (only nodes titled "ptc" trigger PTC)
+#### 4. Local Dev — Opt-in Debug (only nodes whose title contains "useptc" trigger PTC)
 ```env
 PTC_MODE=on
-PTC_DEBUG=true
+PTC_DEBUG=opt-in
+```
+
+#### 5. Local Dev — Opt-out Debug (all nodes except those whose title contains "nonptc" trigger PTC)
+```env
+PTC_MODE=on
+PTC_DEBUG=opt-out
 ```
 
 ## Schema Export API

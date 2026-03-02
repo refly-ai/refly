@@ -51,7 +51,8 @@ export class PtcEnvService {
   async getPtcEnvVars(user: User, req: SandboxExecuteRequest): Promise<PtcEnvVars> {
     const toolServiceApiUrl = this.endpoint.replace('localhost', 'host.docker.internal');
     const toolServiceApiKey = await this.getOrCreateApiKey(user.uid);
-    const isPtcDebugEnabled = this.config.get<string>('ptc.debug') === 'true';
+    const ptcDebugRaw = this.config.get<string>('ptc.debug') ?? '';
+    const isPtcDebugEnabled = ptcDebugRaw.trim().length > 0;
 
     return {
       REFLY_TOOL_SERVICE_API_URL: toolServiceApiUrl,

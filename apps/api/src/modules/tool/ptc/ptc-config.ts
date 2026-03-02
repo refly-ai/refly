@@ -23,14 +23,33 @@ export enum PtcMode {
 }
 
 /**
+ * PTC debug mode enum
+ *
+ * Controls title-based filtering when debugging PTC. Only applies when the base
+ * PTC permission check (PTC_MODE + PTC_USER_ALLOWLIST) already permits PTC.
+ */
+export enum PtcDebugMode {
+  /**
+   * Opt-in: PTC is disabled by default; enable per-node by adding "useptc" to its title.
+   * Equivalent to the legacy PTC_DEBUG=true behaviour.
+   */
+  OPT_IN = 'opt-in',
+  /**
+   * Opt-out: PTC is enabled by default; disable per-node by adding "nonptc" to its title.
+   */
+  OPT_OUT = 'opt-out',
+}
+
+/**
  * PTC configuration interface
  */
 export interface PtcConfig {
   mode: PtcMode;
-  debug: boolean;
   userAllowlist: Set<string>;
   toolsetAllowlist: Set<string> | null;
   toolsetBlocklist: Set<string>;
+  /** null = debug filtering disabled */
+  debugMode: PtcDebugMode | null;
 }
 
 /**
@@ -41,7 +60,7 @@ export interface PtcConfig {
  */
 export function getPtcConfig(configService: ConfigService): PtcConfig {
   const mode = parsePtcMode(configService.get<string>('ptc.mode'));
-  const debug = configService.get<string>('ptc.debug') === 'true';
+  const debugMode = parsePtcDebugMode(configService.get<string>('ptc.debug'));
   const userAllowlist = parseCommaSeparatedList(configService.get<string>('ptc.userAllowlist'));
   const toolsetAllowlist = parseOptionalCommaSeparatedList(
     configService.get<string>('ptc.toolsetAllowlist'),
@@ -52,7 +71,7 @@ export function getPtcConfig(configService: ConfigService): PtcConfig {
 
   return {
     mode,
-    debug,
+    debugMode,
     userAllowlist,
     toolsetAllowlist,
     toolsetBlocklist,
@@ -127,6 +146,37 @@ export function isToolsetAllowed(toolsetKey: string, config: PtcConfig): boolean
 
   // No allowlist means all toolsets are allowed (if not blocked)
   return true;
+}
+
+/**
+ * Parse PTC debug mode from string
+ *
+ * Accepts "opt-in", "opt-out", or the legacy "true" (treated as opt-in).
+ * Returns null when unset or empty.
+ *
+ * @param value - Debug env var value
+ * @returns Parsed PtcDebugMode or null
+ */
+function parsePtcDebugMode(value?: string): PtcDebugMode | null {
+  if (!value?.trim()) {
+    return null;
+  }
+
+  const normalized = value.trim().toLowerCase();
+
+  // Legacy boolean support: PTC_DEBUG=true → opt-in
+  if (normalized === 'true') {
+    return PtcDebugMode.OPT_IN;
+  }
+
+  if (Object.values(PtcDebugMode).includes(normalized as PtcDebugMode)) {
+    return normalized as PtcDebugMode;
+  }
+
+  logger.warn(
+    `Invalid PTC_DEBUG value: ${value}, valid values are: ${Object.values(PtcDebugMode).join(', ')}. Disabling debug mode.`,
+  );
+  return null;
 }
 
 /**

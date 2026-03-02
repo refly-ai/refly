@@ -1,6 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import {
   PtcMode,
+  PtcDebugMode,
   getPtcConfig,
   isPtcEnabledForUser,
   isPtcEnabledForToolsets,
@@ -32,7 +33,7 @@ describe('PtcConfig', () => {
     it('should parse default config correctly', () => {
       const config = getPtcConfig(mockConfigService as ConfigService);
       expect(config.mode).toBe(PtcMode.OFF);
-      expect(config.debug).toBe(false);
+      expect(config.debugMode).toBeNull();
       expect(config.userAllowlist.size).toBe(0);
       expect(config.toolsetAllowlist).toBeNull();
       expect(config.toolsetBlocklist.size).toBe(0);
@@ -64,7 +65,7 @@ describe('PtcConfig', () => {
       expect(config.mode).toBe(PtcMode.OFF);
     });
 
-    it('should parse debugMode as true when set to "true"', () => {
+    it('should parse debugMode as OPT_IN when set to "true" (legacy)', () => {
       mockConfigService.get = jest.fn((key: string) => {
         const configs: Record<string, string> = {
           'ptc.mode': 'on',
@@ -72,13 +73,60 @@ describe('PtcConfig', () => {
           'ptc.userAllowlist': '',
           'ptc.toolsetAllowlist': '',
           'ptc.toolsetBlocklist': '',
-          'ptc.workflowAllowlist': '',
         };
         return configs[key];
       });
 
       const config = getPtcConfig(mockConfigService as ConfigService);
-      expect(config.debug).toBe(true);
+      expect(config.debugMode).toBe(PtcDebugMode.OPT_IN);
+    });
+
+    it('should parse debugMode as OPT_IN when set to "opt-in"', () => {
+      mockConfigService.get = jest.fn((key: string) => {
+        const configs: Record<string, string> = {
+          'ptc.mode': 'on',
+          'ptc.debug': 'opt-in',
+          'ptc.userAllowlist': '',
+          'ptc.toolsetAllowlist': '',
+          'ptc.toolsetBlocklist': '',
+        };
+        return configs[key];
+      });
+
+      const config = getPtcConfig(mockConfigService as ConfigService);
+      expect(config.debugMode).toBe(PtcDebugMode.OPT_IN);
+    });
+
+    it('should parse debugMode as OPT_OUT when set to "opt-out"', () => {
+      mockConfigService.get = jest.fn((key: string) => {
+        const configs: Record<string, string> = {
+          'ptc.mode': 'on',
+          'ptc.debug': 'opt-out',
+          'ptc.userAllowlist': '',
+          'ptc.toolsetAllowlist': '',
+          'ptc.toolsetBlocklist': '',
+        };
+        return configs[key];
+      });
+
+      const config = getPtcConfig(mockConfigService as ConfigService);
+      expect(config.debugMode).toBe(PtcDebugMode.OPT_OUT);
+    });
+
+    it('should return null debugMode for invalid value', () => {
+      mockConfigService.get = jest.fn((key: string) => {
+        const configs: Record<string, string> = {
+          'ptc.mode': 'on',
+          'ptc.debug': 'invalid-value',
+          'ptc.userAllowlist': '',
+          'ptc.toolsetAllowlist': '',
+          'ptc.toolsetBlocklist': '',
+        };
+        return configs[key];
+      });
+
+      const config = getPtcConfig(mockConfigService as ConfigService);
+      expect(config.debugMode).toBeNull();
     });
   });
 
@@ -86,7 +134,7 @@ describe('PtcConfig', () => {
     it('should return false when mode is OFF', () => {
       const config: PtcConfig = {
         mode: PtcMode.OFF,
-        debug: false,
+        debugMode: null,
         userAllowlist: new Set<string>(),
         toolsetAllowlist: null,
         toolsetBlocklist: new Set<string>(),
@@ -97,7 +145,7 @@ describe('PtcConfig', () => {
     it('should return true when mode is ON', () => {
       const config: PtcConfig = {
         mode: PtcMode.ON,
-        debug: false,
+        debugMode: null,
         userAllowlist: new Set<string>(),
         toolsetAllowlist: null,
         toolsetBlocklist: new Set<string>(),
@@ -108,7 +156,7 @@ describe('PtcConfig', () => {
     it('should check allowlist when mode is PARTIAL', () => {
       const config: PtcConfig = {
         mode: PtcMode.PARTIAL,
-        debug: false,
+        debugMode: null,
         userAllowlist: new Set<string>(['u-123']),
         toolsetAllowlist: null,
         toolsetBlocklist: new Set<string>(),
@@ -121,7 +169,7 @@ describe('PtcConfig', () => {
   describe('isToolsetAllowed', () => {
     const baseConfig: PtcConfig = {
       mode: PtcMode.ON,
-      debug: false,
+      debugMode: null,
       userAllowlist: new Set<string>(),
       toolsetAllowlist: null,
       toolsetBlocklist: new Set<string>(),
@@ -159,7 +207,7 @@ describe('PtcConfig', () => {
   describe('isPtcEnabledForToolsets', () => {
     const config: PtcConfig = {
       mode: PtcMode.ON,
-      debug: false,
+      debugMode: null,
       userAllowlist: new Set<string>(),
       toolsetAllowlist: new Set<string>(['t1', 't2']),
       toolsetBlocklist: new Set<string>(['blocked']),
