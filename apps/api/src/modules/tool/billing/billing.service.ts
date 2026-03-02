@@ -419,6 +419,15 @@ export class BillingService implements OnModuleInit {
                 responseSchema,
                 this.logger,
               );
+
+              // Ensure minimum 1 credit per tool call when dynamic billing
+              // resolves to a positive sub-credit amount. Without this floor,
+              // small inputs (e.g., short TTS text) produce micro-credits that
+              // never reach the accumulator flush threshold, resulting in no charge.
+              if (finalDiscountedPrice > 0 && finalDiscountedPrice < 1) {
+                finalDiscountedPrice = 1;
+              }
+
               finalOriginalPrice = finalDiscountedPrice;
               resolvedFromDynamicBilling = true;
 

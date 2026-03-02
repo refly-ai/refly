@@ -11,6 +11,7 @@
  * - Free toolset with/without access
  * - Invalid input guards
  * - NaN/Infinity from dynamic calc
+ * - Minimum credit floor for sub-credit dynamic billing
  */
 
 import { Logger } from '@nestjs/common';
@@ -383,5 +384,75 @@ describe('BillingService.processBilling', () => {
     expect(result.success).toBe(true);
     // NaN gets caught by finiteness guard and reset to 0
     expect(result.discountedPrice).toBe(0);
+  });
+
+  // ---- Minimum Credit Floor for Dynamic Billing ----
+
+  test('16: Sub-credit dynamic billing (0.18) is floored to 1', async () => {
+    // Simulates short TTS text producing 0.18 credits (< flush threshold)
+    calculateCreditsFromRules.mockResolvedValueOnce(0.18);
+
+    const result = await service.processBilling(
+      baseOptions({
+        input: { text: 'hello' },
+        output: {},
+        requestSchema: '{"type":"object","properties":{"text":{"type":"string"}}}',
+        responseSchema: '{"type":"object","properties":{}}',
+      }),
+    );
+
+    expect(result.success).toBe(true);
+    // 0.18 credits should be floored to minimum 1 credit
+    expect(result.discountedPrice).toBe(1);
+    expect(result.originalPrice).toBe(1);
+  });
+
+  test('17: Zero dynamic billing stays at 0 (no minimum applied)', async () => {
+    calculateCreditsFromRules.mockResolvedValueOnce(0);
+
+    const result = await service.processBilling(
+      baseOptions({
+        input: { text: '' },
+        output: {},
+        requestSchema: '{"type":"object","properties":{"text":{"type":"string"}}}',
+        responseSchema: '{"type":"object","properties":{}}',
+      }),
+    );
+
+    expect(result.success).toBe(true);
+    // 0 credits should NOT be floored to 1 (tool produced no billable work)
+    expect(result.discountedPrice).toBe(0);
+  });
+
+  test('18: Dynamic billing at exactly 1 stays at 1 (floor not applied)', async () => {
+    calculateCreditsFromRules.mockResolvedValueOnce(1);
+
+    const result = await service.processBilling(
+      baseOptions({
+        input: { text: 'medium text' },
+        output: {},
+        requestSchema: '{"type":"object","properties":{"text":{"type":"string"}}}',
+        responseSchema: '{"type":"object","properties":{}}',
+      }),
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.discountedPrice).toBe(1);
+  });
+
+  test('19: Dynamic billing above 1 (1.5) stays unchanged', async () => {
+    calculateCreditsFromRules.mockResolvedValueOnce(1.5);
+
+    const result = await service.processBilling(
+      baseOptions({
+        input: { text: 'longer text' },
+        output: {},
+        requestSchema: '{"type":"object","properties":{"text":{"type":"string"}}}',
+        responseSchema: '{"type":"object","properties":{}}',
+      }),
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.discountedPrice).toBe(1.5);
   });
 });
