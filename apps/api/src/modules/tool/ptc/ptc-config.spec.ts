@@ -138,6 +138,7 @@ describe('PtcConfig', () => {
         userAllowlist: new Set<string>(),
         toolsetAllowlist: null,
         toolsetBlocklist: new Set<string>(),
+        sequential: false,
       };
       expect(isPtcEnabledForUser(mockUser, config)).toBe(false);
     });
@@ -149,6 +150,7 @@ describe('PtcConfig', () => {
         userAllowlist: new Set<string>(),
         toolsetAllowlist: null,
         toolsetBlocklist: new Set<string>(),
+        sequential: false,
       };
       expect(isPtcEnabledForUser(mockUser, config)).toBe(true);
     });
@@ -160,6 +162,7 @@ describe('PtcConfig', () => {
         userAllowlist: new Set<string>(['u-123']),
         toolsetAllowlist: null,
         toolsetBlocklist: new Set<string>(),
+        sequential: false,
       };
       expect(isPtcEnabledForUser(mockUser, config)).toBe(true);
       expect(isPtcEnabledForUser({ uid: 'u-other' } as User, config)).toBe(false);
@@ -173,6 +176,7 @@ describe('PtcConfig', () => {
       userAllowlist: new Set<string>(),
       toolsetAllowlist: null,
       toolsetBlocklist: new Set<string>(),
+      sequential: false,
     };
 
     it('should return false if toolset is in blocklist', () => {
@@ -211,6 +215,7 @@ describe('PtcConfig', () => {
       userAllowlist: new Set<string>(),
       toolsetAllowlist: new Set<string>(['t1', 't2']),
       toolsetBlocklist: new Set<string>(['blocked']),
+      sequential: false,
     };
 
     it('should return true if user is enabled and all toolsets are allowed', () => {

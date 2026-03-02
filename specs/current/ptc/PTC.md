@@ -27,11 +27,13 @@ Other modules that integrate with PTC:
 | File | Role |
 |------|------|
 | `apps/api/src/modules/skill/skill-invoker.service.ts` | PTC decision point; builds ptcContext; starts/stops PTC poller |
+| `apps/api/src/modules/config/app.config.ts` | Env parsing for `PTC_MODE`, allow/block lists, debug mode, and `PTC_SEQUENTIAL` |
 | `apps/api/src/modules/skill/ptc-poller.manager.ts` | Polls DB for completed PTC tool calls, sends SSE events to frontend |
 | `apps/api/src/modules/tool/tool.controller.ts` | Exposes `/v1/tool/execute` and `/v1/tool/toolset/exportDefinitions` endpoints |
 | `apps/api/src/modules/tool/billing/billing.service.ts` | Processes credit deductions for PTC tool calls |
 | `apps/api/src/modules/tool/billing/billing.dto.ts` | Billing data types including `toolCallId` linkage |
 | `apps/api/src/modules/sandbox/sandbox.service.ts` | Sandbox orchestration; receives ptcContext, injects env vars |
+| `packages/skill-template/src/prompts/node-agent.ts` | Builds node-agent prompt and injects `ptcEnabled`/`ptcSequential` template variables |
 | `packages/agent-tools/src/builtin/sandbox.ts` | `execute_code` built-in tool; passes `ptcEnabled` and context |
 | `packages/skill-template/src/prompts/templates/partials/ptc-mode.md` | System prompt partial; instructs model how to write PTC Python code |
 
@@ -57,7 +59,8 @@ User submits task
 1. Get user toolsets from config
 2. Call `isPtcEnabledForToolsets` to judge whether PTC is enabled for the user and toolsets
 3. Set `config.configurable.ptcEnabled = true/false`
-4. If PTC is enabled and non-builtin toolsets exist:
+4. Set `config.configurable.ptcSequential = ptcConfig.sequential` (from `PTC_SEQUENTIAL`)
+5. If PTC is enabled and non-builtin toolsets exist:
    - Call `ptcSdkService.buildPtcContext` → reads Python SDK files from S3
    - Set `config.configurable.ptcContext = ptcContext`
 
@@ -68,6 +71,9 @@ In `Agent.ts` (node agent), when `ptcEnabled=true`:
   - Builtins preserved: `read_file`, `list_files`, `read_agent_result`, `read_tool_result`, `get_time`, `execute_code`
   - Third-party tools (Composio, Config-based, Legacy SDK) are removed from the tool list
 - Injects `ptcContext` into system prompt: SDK Python code + markdown docs for each toolset
+- Injects `ptcSequential` into prompt template to control execution-order instructions:
+  - `false` (default): allow parallel calls for independent read-only operations
+  - `true`: force sequential execution for all tool calls
 
 ### Phase 3: Sandbox Execution
 
@@ -243,6 +249,14 @@ Comma-separated toolset keys. If set, only these toolsets can use PTC. Default: 
 ### PTC_TOOLSET_BLOCKLIST
 Comma-separated toolset keys. These toolsets are always blocked from PTC, regardless of other settings (highest priority).
 
+### PTC_SEQUENTIAL
+Controls execution-order guidance in the PTC prompt. Default: `false`.
+
+| Value | Effect |
+|-------|--------|
+| unset / `false` | Default mode: prompt allows guarded parallel execution (`ThreadPoolExecutor`) for independent read-only calls; serial for dependent/side-effect calls |
+| `true` | Force sequential mode in prompt: all tool calls execute one-by-one |
+
 ### Scenarios
 
 #### 1. Production — PTC Enabled for All Users
@@ -273,6 +287,131 @@ PTC_DEBUG=opt-in
 PTC_MODE=on
 PTC_DEBUG=opt-out
 ```
+
+#### 6. Local Dev — Force Sequential PTC
+```env
+PTC_MODE=on
+PTC_SEQUENTIAL=true
+```
+
+## SDK Development Workflow (refly-ptc toolchain)
+
+The Python SDK files are authored and managed in a separate offline project: `refly-ptc`.
+
+### Two-Project Architecture
+
+```
+refly-ptc/  (offline SDK toolchain)          refly/  (main platform)
+─────────────────────────────────            ──────────────────────
+Step 1: export tool definitions         ←──  GET /v1/tool/toolset/exportDefinitions
+Step 2: generate Python SDK code
+Step 3: upload SDK files to object storage ──→  S3/MinIO (versioned by hash)
+                                             Step 4: update SANDBOX_S3LIB_HASH in apps/api/.env
+                                                     + restart refly-api
+                                                     refly-api reads SDK at runtime
+                                                     (ptc-sdk.service.ts pulls from S3)
+```
+
+### Step-by-Step
+
+**Step 1 — Export tool definitions**
+
+```bash
+uv run ptc tool definition <toolset>   # single toolset
+uv run ptc tool definition all         # all toolsets
+```
+
+Calls `GET /v1/tool/toolset/exportDefinitions` → saves JSON schemas to `data/tool-definition/<toolset>.json`.
+
+**Step 2 — Generate Python SDK**
+
+```bash
+uv run ptc generate <toolset>
+uv run ptc generate all
+```
+
+Reads JSONs → produces:
+- `libs/refly_tools/<toolset>.py` — Python SDK class
+- `libs/refly_tools/docs/<toolset>.md` — markdown docs injected into system prompt
+
+**Step 3 — Upload to object storage**
+
+```bash
+uv run ptc upload --local --hash <HASH>   # local MinIO (dev)
+uv run ptc upload --s3 --hash <HASH>      # AWS S3 (prod)
+```
+
+Uploads `libs/refly_tools/` to path `<SANDBOX_S3LIB_PATH_PREFIX>/<HASH>/refly_tools/...`.
+
+**Step 4 — Update env and restart API**
+
+In `apps/api/.env`:
+```env
+SANDBOX_S3LIB_HASH=<HASH>
+```
+
+Then restart `refly-api`. `ptc-sdk.service.ts` reads `sandbox.s3Lib.hash` and constructs the full S3 path at invocation time: `<PATH_PREFIX>/<HASH>/refly_tools/<toolset>.py`.
+
+Current dev values: `SANDBOX_S3LIB_PATH_PREFIX=tmp/perish/refly-executor-slim/refly-tools-dev`, `SANDBOX_S3LIB_HASH=PTC0g4v14`.
+
+When toolsets change (new tools, updated schemas), repeat steps 1→2→3→4. No API redeploy needed beyond the env update + restart.
+
+---
+
+## Runtime Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Frontend as Refly Web
+    participant ReflyAPI as Refly API
+    participant S3 as Object Storage (S3/MinIO)
+    participant Sandbox as Code Sandbox
+    participant ToolExecute as Tool Service
+
+    User->>Frontend: Run workflow
+    Frontend->>ReflyAPI: Run node agent
+
+    ReflyAPI->>ReflyAPI: skill-invoker: check isPtcEnabled
+    ReflyAPI->>S3: Fetch SDK files
+    S3-->>ReflyAPI: Python code + markdown docs
+
+    ReflyAPI->>ReflyAPI: ptc-env.service: create temp API key (user_api_keys)
+    ReflyAPI->>ReflyAPI: Build PtcContext
+
+    ReflyAPI->>ReflyAPI: Agent LLM call (builtin tools only + ptcContext in system prompt)
+    ReflyAPI-->>Frontend: SSE: thinking / text tokens
+
+    ReflyAPI->>ReflyAPI: Agent calls execute_code tool
+    ReflyAPI->>ReflyAPI: Write tool_call_results (type=agent, status=executing)
+    ReflyAPI->>ReflyAPI: ptc-poller.manager: start polling PTC tool calls
+
+    ReflyAPI->>Sandbox: execute_code tool (Python code invoking SDK)
+
+    loop Sandbox invokes Tool Service for each PTC tool call
+        Sandbox->>ToolExecute: POST /v1/tool/execute
+        ToolExecute->>ReflyAPI: tool-execution.service
+        ReflyAPI->>ReflyAPI: Write tool_call_results (type=ptc, status=executing)
+        ReflyAPI->>ReflyAPI: toolIdentifyService: route by type, executeXxxTool
+        ReflyAPI->>ReflyAPI: Update tool_call_results (status=completed/failed)
+        ReflyAPI->>ReflyAPI: billingService.processBilling() → credit_usages
+        ToolExecute-->>Sandbox: Tool result JSON
+    end
+
+    Sandbox-->>ReflyAPI: execute_code output
+
+    loop PTC Poller (every 1500ms)
+        ReflyAPI->>ReflyAPI: Query tool_call_results by ptcCallId
+        ReflyAPI-->>Frontend: SSE: tool_call_end / tool_call_error (ptc: true)
+    end
+
+    ReflyAPI->>ReflyAPI: poller.stop() — flush remaining events
+    ReflyAPI->>ReflyAPI: Agent reads execute_code output → continues or reflects
+    ReflyAPI-->>Frontend: SSE: final response
+    Frontend->>User: Display result + tool call cards
+```
+
+---
 
 ## Schema Export API
 
@@ -329,3 +468,5 @@ result = ToolsetClass.tool_name(param1=value1, param2=value2)
 5. **Blocklist > Allowlist precedence**: `PTC_TOOLSET_BLOCKLIST` always wins regardless of `PTC_TOOLSET_ALLOWLIST`, enabling safe exclusion of problem toolsets in production.
 
 6. **callId prefixes for type identification**: `ptc:<uuid>` vs `standalone:<uuid>` vs (agent calls tracked separately in `action_results`) allows fast DB queries by call origin.
+
+7. **Execution-order feature flag**: `PTC_SEQUENTIAL` provides a runtime safety switch to force serial PTC behavior without reverting prompt changes or redeploying.

@@ -50,6 +50,8 @@ export interface PtcConfig {
   toolsetBlocklist: Set<string>;
   /** null = debug filtering disabled */
   debugMode: PtcDebugMode | null;
+  /** Force all tool calls to execute sequentially (disables concurrent execution in prompt) */
+  sequential: boolean;
 }
 
 /**
@@ -69,12 +71,15 @@ export function getPtcConfig(configService: ConfigService): PtcConfig {
     configService.get<string>('ptc.toolsetBlocklist'),
   );
 
+  const sequential = configService.get<boolean>('ptc.sequential') ?? false;
+
   return {
     mode,
     debugMode,
     userAllowlist,
     toolsetAllowlist,
     toolsetBlocklist,
+    sequential,
   };
 }
 

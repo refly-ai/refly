@@ -438,6 +438,7 @@ export class SkillInvokerService {
       }
 
       config.configurable.ptcEnabled = ptcEnabled;
+      config.configurable.ptcSequential = ptcConfig.sequential;
 
       if (ptcEnabled && tools.nonBuiltInToolsets.length > 0) {
         const ptcContext = await this.ptcSdkService.buildPtcContext(tools.nonBuiltInToolsets);
