@@ -5,7 +5,6 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
 import type {
   User,
   ExecuteToolRequest,
@@ -31,6 +30,7 @@ import { BillingService } from '../billing/billing.service';
 import { ResourceHandler, parseJsonSchema, resolveCredentials, fillDefaultValues } from '../utils';
 import { runInContext } from '../tool-context';
 import { HandlerService, type HttpHandlerOptions } from '../handlers/core/handler.service';
+import { generateToolExecutionCallId } from './tool-call-id';
 
 /**
  * PTC (Programmatic Tool Call) context for /v1/tool/execute API
@@ -229,10 +229,10 @@ export class ToolExecutionService {
 
   /**
    * Generate a unique call ID for tool execution
-   * Format: `{callType}:{uuid}` (toolset/tool info lives in the DB record)
+   * Format: `{callType}_{uuid}` (toolset/tool info lives in the DB record)
    */
   private generateCallId(callType: CallType): string {
-    return `${callType}:${randomUUID()}`;
+    return generateToolExecutionCallId(callType);
   }
 
   /**

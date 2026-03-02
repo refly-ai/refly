@@ -46,7 +46,7 @@ function actionStepPO2DTO(step: ActionStepDetail, options?: SanitizeOptions): Ac
 }
 
 export function actionMessagePO2DTO(message: ActionMessageModel): ActionMessage {
-  const isPtc = message.toolCallId?.startsWith('ptc:');
+  const isPtc = message.toolCallId?.startsWith('ptc:') || message.toolCallId?.startsWith('ptc_');
   return {
     ...pick(message, ['messageId', 'content', 'reasoningContent', 'usageMeta', 'toolCallId']),
     type: message.type as ActionMessageType,
