@@ -26,6 +26,7 @@ const WorkspaceRedirect = lazy(() =>
 const ProtectedRoute = lazy(() =>
   import('./redirects').then((m) => ({ default: m.ProtectedRoute })),
 );
+const PrototypeHelloWorldPage = lazy(() => import('../pages/prototype/HelloWorldPage'));
 
 // Components imported from web-core are already lazy-loaded
 import {
@@ -169,5 +170,9 @@ export const RoutesList: RouteObject[] = [
   {
     path: '/workflow-template/:shareId',
     element: <WorkflowAppPage />,
+  },
+  {
+    path: '/prototype/hello-world',
+    element: <PrototypeHelloWorldPage />,
   },
 ];
