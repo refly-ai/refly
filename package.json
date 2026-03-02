@@ -29,6 +29,7 @@
     "cy:open": "cypress open",
     "cy:install": "cypress install",
     "lint": "biome lint .",
+    "typecheck": "pnpm -r --if-present typecheck",
     "lint:fix": "biome lint . --write",
     "format": "biome format .",
     "format:fix": "biome format . --write",
