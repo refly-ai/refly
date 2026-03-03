@@ -31,7 +31,7 @@ export class SandboxClient {
     timeout?: number,
   ): Promise<WorkerExecuteResponse> {
     const requestId = uuidv4();
-    const timeoutMs = timeout || SANDBOX_TIMEOUTS.DEFAULT;
+    const timeoutMs = timeout || context.timeout || SANDBOX_TIMEOUTS.DEFAULT;
     const startTime = performance.now();
 
     this.logger.info({

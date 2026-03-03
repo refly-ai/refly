@@ -489,10 +489,7 @@ export class ToolExecutionService {
     // Step 4: Create HTTP handler
     const { adapter, options } = await this.createHttpHandler(config, parsedMethod, credentials);
 
-    // Step 5: Prepare request with defaults and resource preprocessing
-    const request = await this.prepareToolRequest(config, parsedMethod, args, user);
-
-    // Step 6: Execute handler within request context
+    // Step 5: Execute handler within request context
     const runnableConfig: SkillRunnableConfig = {
       configurable: {
         user,
@@ -506,24 +503,29 @@ export class ToolExecutionService {
     const toolNameValue = parsedMethod?.name ?? '';
     const toolsetKeyValue = config?.inventoryKey ?? '';
 
-    // Add toolCallId to request metadata for billing tracking
-    if (toolCallId) {
-      request.metadata = {
-        ...request.metadata,
-        toolCallId,
-      };
-    }
-
     const response = await runInContext(
       {
         langchainConfig: runnableConfig,
         requestId: `ptc-${toolsetKeyValue}-${toolNameValue}-${Date.now()}`,
         metadata: { toolName: toolNameValue, toolsetKey: toolsetKeyValue, toolCallId },
       },
-      async () => this.handlerService.execute(request, adapter, options),
+      async () => {
+        // Prepare request with defaults and resource preprocessing
+        const request = await this.prepareToolRequest(config, parsedMethod, args, user);
+
+        // Add toolCallId to request metadata for billing tracking
+        if (toolCallId) {
+          request.metadata = {
+            ...request.metadata,
+            toolCallId,
+          };
+        }
+
+        return this.handlerService.execute(request, adapter, options);
+      },
     );
 
-    // Step 7: Convert HandlerResponse to execution result format
+    // Step 6: Convert HandlerResponse to execution result format
     return this.convertHandlerResponse(response);
   }
 
