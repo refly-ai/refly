@@ -658,8 +658,12 @@ export class AutoModelRoutingService implements OnModuleDestroy {
   }
 
   /**
-   * Build a map of modelId -> ProviderItemModel
-   * Filters out invalid configs and reasoning models
+   * Build a map of modelId or itemId -> ProviderItemModel
+   * Indexes each item by both config.modelId and item.itemId so that routing
+   * rules can target either value. This makes rules resilient to model version
+   * upgrades where the modelId of a provider_item changes but the itemId stays
+   * the same.
+   * Filters out invalid configs and reasoning models.
    */
   private buildModelMap(items: ProviderItemModel[]): Map<string, ProviderItemModel> {
     const modelMap = new Map<string, ProviderItemModel>();
@@ -672,6 +676,7 @@ export class AutoModelRoutingService implements OnModuleDestroy {
       if (config.modelId) {
         modelMap.set(config.modelId, item);
       }
+      modelMap.set(item.itemId, item);
     }
 
     return modelMap;

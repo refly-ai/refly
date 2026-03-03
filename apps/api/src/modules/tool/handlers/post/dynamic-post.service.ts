@@ -104,6 +104,7 @@ export class DynamicPostHandlerService extends BasePostHandlerService {
         output: response.data as Record<string, unknown>,
         requestSchema: request.metadata?.requestSchema as string,
         responseSchema: request.metadata?.responseSchema as string,
+        toolCallId: request.metadata?.toolCallId as string | undefined,
       });
 
       // Add billing metadata to response if credits were charged

@@ -339,6 +339,7 @@ export interface SkillRunnableConfig extends RunnableConfig {
     ptcEnabled?: boolean;
     ptcContext?: PtcContext;
     nodeEditContext?: NodeEditContext;
+    ptcSequential?: boolean;
     webSearchEnabled?: boolean;
   };
   metadata?: SkillRunnableMeta;

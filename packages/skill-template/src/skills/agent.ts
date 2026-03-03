@@ -122,6 +122,7 @@ export class Agent extends BaseSkill {
       mode = 'node_agent',
       ptcEnabled = false,
       ptcContext = undefined,
+      ptcSequential = false,
     } = config.configurable;
     const { optimizedQuery, context, sources, usedChatHistory } = preprocessResult;
 
@@ -132,7 +133,7 @@ export class Agent extends BaseSkill {
             nodeEditContext: config.configurable.nodeEditContext,
             webSearchEnabled: config.configurable.webSearchEnabled ?? false,
           })
-        : buildNodeAgentSystemPrompt({ ptcEnabled, ptcContext });
+        : buildNodeAgentSystemPrompt({ ptcEnabled, ptcContext, ptcSequential });
 
     // Use copilot scene for copilot_agent mode, agent scene for node_agent mode, otherwise use chat scene
     const modelConfigScene = getModelSceneFromMode(mode);

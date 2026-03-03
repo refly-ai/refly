@@ -141,10 +141,6 @@ export class PtcPollerManager {
   ): void {
     const { res, resultId, version, messageAggregator, getRunMeta } = this.context;
 
-    if (!res) {
-      return;
-    }
-
     const parsedInput = safeParseJSON(ptcCall.input || '{}') ?? {};
     const parsedOutput = safeParseJSON(ptcCall.output || '{}') ?? {};
 
@@ -158,10 +154,15 @@ export class PtcPollerManager {
       endTs: ptcCall.updatedAt.getTime(),
     };
 
+    // Always persist the PTC tool message to DB regardless of SSE availability
     const ptcMessageId = messageAggregator.addToolMessage({
       toolCallId: ptcCall.callId,
       toolCallMeta: ptcToolCallMeta,
     });
+
+    if (!res) {
+      return;
+    }
 
     const runMeta = getRunMeta();
     const ssePayload = {

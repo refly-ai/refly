@@ -67,6 +67,9 @@ apps/api/load-tests/results/*.txt
 deploy/helm/**/charts/*.tgz
 deploy/helm/**/charts/**/*.tgz
 
+# Python
+__pycache__/
+
 # Local agent guidance / standards experiments
 .worktrees/
 AGENTS.md
@@ -92,4 +95,4 @@ tools/agent-skills/refly-standards-dev-loop/
 
 # Local Prisma migration SQL experiments
 apps/api/prisma/migrations/
-.agent-runtime/ 
+.agent-runtime/

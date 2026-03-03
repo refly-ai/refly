@@ -870,8 +870,8 @@ importers:
         specifier: ^17.5.0
         version: 17.6.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       refly-icons:
-        specifier: ^1.1.5
-        version: 1.1.5(react@18.3.1)
+        specifier: ^1.1.7
+        version: 1.1.7(react@18.3.1)
       rehype-highlight:
         specifier: ^6.0.0
         version: 6.0.0
@@ -1552,8 +1552,8 @@ importers:
         specifier: ^17.5.0
         version: 17.6.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       refly-icons:
-        specifier: ^1.1.5
-        version: 1.1.5(react@18.3.1)
+        specifier: ^1.1.7
+        version: 1.1.7(react@18.3.1)
     devDependencies:
       '@refly/tsconfig':
         specifier: workspace:*
@@ -16110,8 +16110,8 @@ packages:
     resolution: {integrity: sha512-00o4I+DVrefhv+nX0ulyi3biSHCPDe+yLv5o/p6d/UVlirijB8E16FtfwSAi4g3tcqrQ4lRAqQSoFEZJehYEcw==}
     engines: {node: '>= 0.4'}
 
-  refly-icons@1.1.5:
-    resolution: {integrity: sha512-hQTzo/vbznQNwGCMVJK9EF9FU9/XS32C6NgIY3CygXyAh7+x6sKfh4Q7SmbZPBdhA97XFP+qrtfbigB7wc4adA==}
+  refly-icons@1.1.7:
+    resolution: {integrity: sha512-LIoWpxV3pxlFLmYf5c5tLzPJR9IK3UqcdbjXM9w6KHv0IXTydCxyCUuwIHP8Dx4Yxwv2F2dlXeHdyZ/Cu1nFpA==}
     peerDependencies:
       react: '>=17.0.0'
 
@@ -37519,7 +37519,7 @@ snapshots:
       get-proto: 1.0.1
       which-builtin-type: 1.2.1
 
-  refly-icons@1.1.5(react@18.3.1):
+  refly-icons@1.1.7(react@18.3.1):
     dependencies:
       react: 18.3.1
 

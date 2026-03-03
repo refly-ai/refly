@@ -71,7 +71,7 @@ import { StepService } from '../step/step.service';
 import { SyncRequestUsageJobData, SyncTokenUsageJobData } from '../subscription/subscription.dto';
 import { ToolCallService, ToolCallStatus } from '../tool-call/tool-call.service';
 import { ToolService } from '../tool/tool.service';
-import { getPtcConfig, isPtcEnabledForToolsets, PtcSdkService } from '../tool/ptc';
+import { getPtcConfig, isPtcEnabledForToolsets, PtcDebugMode, PtcSdkService } from '../tool/ptc';
 import { InvokeSkillJobData } from './skill.dto';
 import { DriveService } from '../drive/drive.service';
 import { CanvasSyncService } from '../canvas-sync/canvas-sync.service';
@@ -422,17 +422,25 @@ export class SkillInvokerService {
       (config.configurable as any).builtInToolsets = tools.builtInToolsets;
       (config.configurable as any).nonBuiltInToolsets = tools.nonBuiltInToolsets;
 
-      // Calculate PTC status based on user and toolsets
+      // Calculate PTC status based on user and toolsets (highest priority)
       const ptcConfig = getPtcConfig(this.config);
       const toolsetKeys = toolsets.map((t) => t.id);
       let ptcEnabled = isPtcEnabledForToolsets(user, toolsetKeys, ptcConfig);
 
-      // Debug mode: PTC enabled only if agent node title contains "ptc"
-      if (ptcConfig.debug) {
-        ptcEnabled = !!data.title && data.title.toLowerCase().includes('ptc');
+      // Debug mode: title-based filtering, applied only when base check already permits PTC.
+      // opt-in  → enable only if title contains "useptc"
+      // opt-out → disable only if title contains "nonptc"
+      if (ptcEnabled && ptcConfig.debugMode !== null) {
+        const title = data.title?.toLowerCase() ?? '';
+        if (ptcConfig.debugMode === PtcDebugMode.OPT_IN) {
+          ptcEnabled = title.includes('useptc');
+        } else if (ptcConfig.debugMode === PtcDebugMode.OPT_OUT) {
+          ptcEnabled = !title.includes('nonptc');
+        }
       }
 
       config.configurable.ptcEnabled = ptcEnabled;
+      config.configurable.ptcSequential = ptcConfig.sequential;
 
       if (ptcEnabled && tools.nonBuiltInToolsets.length > 0) {
         const ptcContext = await this.ptcSdkService.buildPtcContext(tools.nonBuiltInToolsets);
@@ -1126,8 +1134,8 @@ export class SkillInvokerService {
                   });
                 }
 
-                // Start PTC polling for execute_code tool
-                if (toolName === 'execute_code' && res) {
+                // Start PTC polling for execute_code tool (runs even without SSE connection for DB persistence)
+                if (toolName === 'execute_code') {
                   ptcPollerManager.start(toolCallId);
                 }
 
@@ -1203,8 +1211,8 @@ export class SkillInvokerService {
               }
               this.metrics.tool.fail({ toolName, toolsetKey, error: errorMsg });
 
-              // Stop PTC polling for execute_code tool on error
-              if (toolName === 'execute_code' && res) {
+              // Stop PTC polling for execute_code tool on error (runs even without SSE connection)
+              if (toolName === 'execute_code') {
                 await ptcPollerManager.stop(toolCallId);
               }
 
