@@ -217,45 +217,54 @@ Temporary API key created by `ptc-env.service.ts` for sandbox auth:
 
 ## Environment Variables
 
-### PTC_MODE
+Variables are evaluated in priority order from highest to lowest. A higher-priority check that fails skips all lower checks.
+
+### Priority 1 — PTC_MODE
 Controls whether PTC is enabled. Default: `off`.
 
 | Value | Effect |
 |-------|--------|
-| `off` | PTC disabled globally for all users |
-| `on` | PTC enabled globally for all users |
-| `partial` | PTC enabled only for users in `PTC_USER_ALLOWLIST` |
+| `off` | Hard-disables PTC for all users. No further checks run. |
+| `on` | PTC enabled globally for all users (subject to lower-priority checks). |
+| `partial` | PTC enabled only for users in `PTC_USER_ALLOWLIST`. |
 
-### PTC_DEBUG
+### Priority 2 — PTC_USER_ALLOWLIST
+Comma-separated user IDs (e.g. `u-user1,u-user2`). Only evaluated when `PTC_MODE=partial`; users not in the list are blocked.
+
+### Priority 3 — PTC_TOOLSET_BLOCKLIST
+Comma-separated toolset keys. Blocked toolsets are always denied, regardless of any other setting. Takes precedence over `PTC_TOOLSET_ALLOWLIST`.
+
+### Priority 3 — PTC_TOOLSET_ALLOWLIST
+Comma-separated toolset keys. If set, only listed toolsets can use PTC; all others are denied. Evaluated after blocklist.
+
+### Priority 4 — PTC_ROLLOUT_PERCENT
+Integer 0–100, default `100`. Controls what percentage of otherwise-eligible users can use PTC via deterministic per-user bucketing.
+
+- `100` (default): all eligible users included — no change to existing behaviour.
+- `0`: kill switch — blocks all users without touching mode/toolset config.
+- `1–99`: gradual rollout. Bucket is computed as `SHA-256(uid + salt) % 100 < percent`. Assignment is stable: the same user always gets the same result for a given salt.
+
+### Priority 5 — PTC_DEBUG
 Default: disabled (empty string).
 
-A secondary filter applied **after** `PTC_MODE` + `PTC_USER_ALLOWLIST` have been evaluated. If those checks disable PTC for the user, `PTC_DEBUG` has no effect.
+A secondary **title-based** filter applied only when all higher-priority checks have already permitted PTC. Has no effect if PTC is disabled.
 
 | Value | Behaviour |
 |-------|-----------|
-| unset / empty | No debug filtering; PTC_MODE + allowlist decide entirely |
-| `opt-in` | PTC on only for nodes whose title contains `"useptc"` (case-insensitive) |
-| `opt-out` | PTC on for all nodes except those whose title contains `"nonptc"` (case-insensitive) |
-| `true` | Legacy alias for `opt-in` |
+| unset / empty | No debug filtering; mode + allowlist + rollout decide entirely. |
+| `opt-in` | PTC on only for nodes whose title contains `"useptc"` (case-insensitive). |
+| `opt-out` | PTC on for all nodes except those whose title contains `"nonptc"` (case-insensitive). |
+| `true` | Legacy alias for `opt-in`. |
 
 When any non-empty value is set, `REFLY_PTC_DEBUG=true` is injected into the sandbox environment.
 
-### PTC_USER_ALLOWLIST
-Comma-separated user IDs (e.g. `u-user1,u-user2`). Only used when `PTC_MODE=partial`.
-
-### PTC_TOOLSET_ALLOWLIST
-Comma-separated toolset keys. If set, only these toolsets can use PTC. Default: all toolsets allowed.
-
-### PTC_TOOLSET_BLOCKLIST
-Comma-separated toolset keys. These toolsets are always blocked from PTC, regardless of other settings (highest priority).
-
-### PTC_SEQUENTIAL
-Controls execution-order guidance in the PTC prompt. Default: `false`.
+### Orthogonal — PTC_SEQUENTIAL
+Controls execution-order guidance in the PTC prompt. Does **not** affect the permission decision.
 
 | Value | Effect |
 |-------|--------|
-| unset / `false` | Default mode: prompt allows guarded parallel execution (`ThreadPoolExecutor`) for independent read-only calls; serial for dependent/side-effect calls |
-| `true` | Force sequential mode in prompt: all tool calls execute one-by-one |
+| unset / `false` | Default: prompt allows guarded parallel execution (`ThreadPoolExecutor`) for independent read-only calls; serial for dependent/side-effect calls. |
+| `true` | Force sequential mode: all tool calls execute one-by-one. |
 
 ### Scenarios
 
@@ -292,6 +301,14 @@ PTC_DEBUG=opt-out
 ```env
 PTC_MODE=on
 PTC_SEQUENTIAL=true
+```
+
+#### 7. Gradual Rollout — Enable PTC for 10% of Users
+```env
+PTC_MODE=on
+PTC_ROLLOUT_PERCENT=10
+```
+
 ```
 
 ## SDK Development Workflow (refly-ptc toolchain)
@@ -440,6 +457,7 @@ result = ToolsetClass.tool_name(param1=value1, param2=value2)
 | Feature | Status |
 |---------|--------|
 | PTC mode toggle (env vars) | ✅ Complete |
+| Percentage-based rollout (`PTC_ROLLOUT_PERCENT`) | ✅ Complete |
 | System prompt adaptation | ✅ Complete |
 | Sandbox integration + temp API keys | ✅ Complete |
 | SDK injection from S3 | ✅ Complete |
@@ -470,3 +488,5 @@ result = ToolsetClass.tool_name(param1=value1, param2=value2)
 6. **callId prefixes for type identification**: `ptc:<uuid>` vs `standalone:<uuid>` vs (agent calls tracked separately in `action_results`) allows fast DB queries by call origin.
 
 7. **Execution-order feature flag**: `PTC_SEQUENTIAL` provides a runtime safety switch to force serial PTC behavior without reverting prompt changes or redeploying.
+
+8. **Deterministic rollout bucketing**: `PTC_ROLLOUT_PERCENT` gates eligible users via `SHA-256(uid + salt) % 100`. Stable per-user assignment ensures consistent experience and reproducible debugging. Changing `PTC_ROLLOUT_SALT` re-buckets all users for a fresh rollout wave without modifying the percentage.

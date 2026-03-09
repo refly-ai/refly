@@ -5,6 +5,7 @@ import {
   getPtcConfig,
   isPtcEnabledForUser,
   isPtcEnabledForToolsets,
+  isPtcEnabledForRollout,
   isToolsetAllowed,
   PtcConfig,
 } from './ptc-config';
@@ -17,12 +18,14 @@ describe('PtcConfig', () => {
   beforeEach(() => {
     mockConfigService = {
       get: jest.fn((key: string) => {
-        const configs: Record<string, string> = {
+        const configs: Record<string, string | number> = {
           'ptc.mode': 'off',
           'ptc.debug': '',
           'ptc.userAllowlist': '',
           'ptc.toolsetAllowlist': '',
           'ptc.toolsetBlocklist': '',
+          'ptc.rolloutPercent': 100,
+          'ptc.rolloutSalt': 'ptc-rollout',
         };
         return configs[key];
       }),
@@ -37,16 +40,20 @@ describe('PtcConfig', () => {
       expect(config.userAllowlist.size).toBe(0);
       expect(config.toolsetAllowlist).toBeNull();
       expect(config.toolsetBlocklist.size).toBe(0);
+      expect(config.rolloutPercent).toBe(100);
+      expect(config.rolloutSalt).toBe('ptc-rollout');
     });
 
     it('should parse partial mode and allowlists correctly', () => {
       mockConfigService.get = jest.fn((key: string) => {
-        const configs: Record<string, string> = {
+        const configs: Record<string, string | number> = {
           'ptc.mode': 'partial',
           'ptc.debug': '',
           'ptc.userAllowlist': 'u-1, u-2 ',
           'ptc.toolsetAllowlist': 'google, notion',
           'ptc.toolsetBlocklist': 'bad-tool',
+          'ptc.rolloutPercent': 100,
+          'ptc.rolloutSalt': 'ptc-rollout',
         };
         return configs[key];
       });
@@ -139,6 +146,8 @@ describe('PtcConfig', () => {
         toolsetAllowlist: null,
         toolsetBlocklist: new Set<string>(),
         sequential: false,
+        rolloutPercent: 100,
+        rolloutSalt: 'ptc-rollout',
       };
       expect(isPtcEnabledForUser(mockUser, config)).toBe(false);
     });
@@ -151,6 +160,8 @@ describe('PtcConfig', () => {
         toolsetAllowlist: null,
         toolsetBlocklist: new Set<string>(),
         sequential: false,
+        rolloutPercent: 100,
+        rolloutSalt: 'ptc-rollout',
       };
       expect(isPtcEnabledForUser(mockUser, config)).toBe(true);
     });
@@ -163,6 +174,8 @@ describe('PtcConfig', () => {
         toolsetAllowlist: null,
         toolsetBlocklist: new Set<string>(),
         sequential: false,
+        rolloutPercent: 100,
+        rolloutSalt: 'ptc-rollout',
       };
       expect(isPtcEnabledForUser(mockUser, config)).toBe(true);
       expect(isPtcEnabledForUser({ uid: 'u-other' } as User, config)).toBe(false);
@@ -177,6 +190,8 @@ describe('PtcConfig', () => {
       toolsetAllowlist: null,
       toolsetBlocklist: new Set<string>(),
       sequential: false,
+      rolloutPercent: 100,
+      rolloutSalt: 'ptc-rollout',
     };
 
     it('should return false if toolset is in blocklist', () => {
@@ -216,6 +231,8 @@ describe('PtcConfig', () => {
       toolsetAllowlist: new Set<string>(['t1', 't2']),
       toolsetBlocklist: new Set<string>(['blocked']),
       sequential: false,
+      rolloutPercent: 100,
+      rolloutSalt: 'ptc-rollout',
     };
 
     it('should return true if user is enabled and all toolsets are allowed', () => {
@@ -230,6 +247,57 @@ describe('PtcConfig', () => {
     it('should return false if any toolset is not allowed', () => {
       expect(isPtcEnabledForToolsets(mockUser, ['t1', 'blocked'], config)).toBe(false);
       expect(isPtcEnabledForToolsets(mockUser, ['t1', 'unknown'], config)).toBe(false);
+    });
+
+    it('should return false when rollout is 0%', () => {
+      const zeroRollout: PtcConfig = { ...config, rolloutPercent: 0 };
+      expect(isPtcEnabledForToolsets(mockUser, ['t1'], zeroRollout)).toBe(false);
+    });
+
+    it('should not apply rollout gate when mode is OFF (fails earlier)', () => {
+      const offZero: PtcConfig = { ...config, mode: PtcMode.OFF, rolloutPercent: 0 };
+      expect(isPtcEnabledForToolsets(mockUser, ['t1'], offZero)).toBe(false);
+    });
+  });
+
+  describe('isPtcEnabledForRollout', () => {
+    const baseConfig: PtcConfig = {
+      mode: PtcMode.ON,
+      debugMode: null,
+      userAllowlist: new Set<string>(),
+      toolsetAllowlist: null,
+      toolsetBlocklist: new Set<string>(),
+      sequential: false,
+      rolloutPercent: 100,
+      rolloutSalt: 'ptc-rollout',
+    };
+
+    it('should return true when rolloutPercent is 100', () => {
+      expect(isPtcEnabledForRollout('u-123', { ...baseConfig, rolloutPercent: 100 })).toBe(true);
+    });
+
+    it('should return false when rolloutPercent is 0', () => {
+      expect(isPtcEnabledForRollout('u-123', { ...baseConfig, rolloutPercent: 0 })).toBe(false);
+    });
+
+    it('should be deterministic for the same user and salt', () => {
+      const config50 = { ...baseConfig, rolloutPercent: 50 };
+      const result1 = isPtcEnabledForRollout('u-abc', config50);
+      const result2 = isPtcEnabledForRollout('u-abc', config50);
+      expect(result1).toBe(result2);
+    });
+
+    it('should produce different results when salt changes', () => {
+      // With a sufficiently large sample, different salts should produce different assignments
+      // This test uses a known user/salt pair to verify rebucketing works
+      const config1 = { ...baseConfig, rolloutPercent: 50, rolloutSalt: 'salt-a' };
+      const config2 = { ...baseConfig, rolloutPercent: 50, rolloutSalt: 'salt-b' };
+      // Collect results across many users — at least one should differ
+      const uids = Array.from({ length: 20 }, (_, i) => `u-${i}`);
+      const results1 = uids.map((uid) => isPtcEnabledForRollout(uid, config1));
+      const results2 = uids.map((uid) => isPtcEnabledForRollout(uid, config2));
+      const anyDifference = results1.some((r, i) => r !== results2[i]);
+      expect(anyDifference).toBe(true);
     });
   });
 });

@@ -4,6 +4,8 @@
  * Supports global toggle, user-level allowlist, and toolset-level allow/block lists.
  */
 
+import { createHash } from 'node:crypto';
+
 import { Logger } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import type { User } from '@refly/openapi-schema';
@@ -52,6 +54,10 @@ export interface PtcConfig {
   debugMode: PtcDebugMode | null;
   /** Force all tool calls to execute sequentially (disables concurrent execution in prompt) */
   sequential: boolean;
+  /** Percentage of otherwise-eligible users for whom PTC is enabled (0-100, default 100) */
+  rolloutPercent: number;
+  /** Salt for deterministic per-user bucketing; change to re-bucket users */
+  rolloutSalt: string;
 }
 
 /**
@@ -73,6 +79,12 @@ export function getPtcConfig(configService: ConfigService): PtcConfig {
 
   const sequential = configService.get<boolean>('ptc.sequential') ?? false;
 
+  const rolloutPercent = Math.min(
+    100,
+    Math.max(0, configService.get<number>('ptc.rolloutPercent') ?? 100),
+  );
+  const rolloutSalt = configService.get<string>('ptc.rolloutSalt') || 'ptc-rollout';
+
   return {
     mode,
     debugMode,
@@ -80,6 +92,8 @@ export function getPtcConfig(configService: ConfigService): PtcConfig {
     toolsetAllowlist,
     toolsetBlocklist,
     sequential,
+    rolloutPercent,
+    rolloutSalt,
   };
 }
 
@@ -108,6 +122,31 @@ export function isPtcEnabledForUser(user: User, config: PtcConfig): boolean {
 }
 
 /**
+ * Compute a deterministic rollout bucket (0-99) for a user.
+ * Uses SHA-256 of `uid + salt` so the assignment is stable across requests.
+ */
+function computeRolloutBucket(uid: string, salt: string): number {
+  const hash = createHash('sha256')
+    .update(uid + salt)
+    .digest();
+  return hash.readUInt32BE(0) % 100;
+}
+
+/**
+ * Check if a user falls within the rollout percentage.
+ * Users are bucketed deterministically so their assignment is stable.
+ *
+ * @param uid - The user ID
+ * @param config - PTC configuration
+ * @returns true if the user is within the rollout percentage
+ */
+export function isPtcEnabledForRollout(uid: string, config: PtcConfig): boolean {
+  if (config.rolloutPercent >= 100) return true;
+  if (config.rolloutPercent <= 0) return false;
+  return computeRolloutBucket(uid, config.rolloutSalt) < config.rolloutPercent;
+}
+
+/**
  * Check if PTC is enabled for a specific user and multiple toolsets.
  * All toolsets must be allowed for the user.
  *
@@ -121,13 +160,18 @@ export function isPtcEnabledForToolsets(
   toolsetKeys: string[],
   config: PtcConfig,
 ): boolean {
-  // Step 1: Check user-level permission
+  // Step 1: Check user-level permission (mode + allowlist)
   if (!isPtcEnabledForUser(user, config)) {
     return false;
   }
 
   // Step 2: Check all toolsets are allowed
-  return toolsetKeys.every((key) => isToolsetAllowed(key, config));
+  if (!toolsetKeys.every((key) => isToolsetAllowed(key, config))) {
+    return false;
+  }
+
+  // Step 3: Apply rollout gate — evaluated after mode/toolset eligibility
+  return isPtcEnabledForRollout(user.uid, config);
 }
 
 /**

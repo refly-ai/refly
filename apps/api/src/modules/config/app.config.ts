@@ -261,6 +261,8 @@ export default () => ({
     toolsetAllowlist: process.env.PTC_TOOLSET_ALLOWLIST || '',
     toolsetBlocklist: process.env.PTC_TOOLSET_BLOCKLIST || '',
     sequential: process.env.PTC_SEQUENTIAL === 'true',
+    rolloutPercent: Number(process.env.PTC_ROLLOUT_PERCENT ?? 100),
+    rolloutSalt: process.env.PTC_ROLLOUT_SALT || 'ptc-rollout',
   },
   schedule: {
     // Rate limiting - controls global and per-user concurrency
