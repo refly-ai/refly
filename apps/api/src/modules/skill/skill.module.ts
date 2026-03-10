@@ -29,6 +29,7 @@ import { SkillInvokeMetrics } from './skill-invoke.metrics';
 import { isDesktop } from '../../utils/runtime';
 import { ActionModule } from '../action/action.module';
 import { ToolModule } from '../tool/tool.module';
+import { BillingModule } from '../tool/billing/billing.module';
 import { ToolCallModule } from '../tool-call/tool-call.module';
 import { DriveModule } from '../drive/drive.module';
 import { CanvasSyncModule } from '../canvas-sync/canvas-sync.module';
@@ -50,6 +51,7 @@ import { SandboxModule } from '../sandbox/sandbox.module';
     CodeArtifactModule,
     ProviderModule,
     ToolModule,
+    BillingModule,
     ToolCallModule,
     McpServerModule,
     MediaGeneratorModule,

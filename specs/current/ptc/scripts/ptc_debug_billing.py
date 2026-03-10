@@ -14,6 +14,7 @@ from ptc_common import (
     make_arg_parser,
     organize_billing_calls,
     print_result_info,
+    print_runtime_config_info,
     resolve_result,
 )
 
@@ -218,7 +219,7 @@ def main():
     )
     args = parser.parse_args()
 
-    conn = connect_db()
+    conn = connect_db(args.env)
     cur = conn.cursor()
 
     r_id, r_ver, _r_type, r_model, r_status, r_title, r_input, r_created = (
@@ -229,6 +230,8 @@ def main():
     print(f"\n{SEPARATOR}")
     print(f" PTC DEBUG BILLING: {r_id}")
     print(f"{SEPARATOR}\n")
+
+    print_runtime_config_info(args.env)
 
     print_result_info(
         r_id,

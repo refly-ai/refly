@@ -71,6 +71,7 @@ import { StepService } from '../step/step.service';
 import { SyncRequestUsageJobData, SyncTokenUsageJobData } from '../subscription/subscription.dto';
 import { ToolCallService, ToolCallStatus } from '../tool-call/tool-call.service';
 import { ToolService } from '../tool/tool.service';
+import { BillingService } from '../tool/billing/billing.service';
 import { getPtcConfig, isPtcEnabledForToolsets, PtcDebugMode, PtcSdkService } from '../tool/ptc';
 import { InvokeSkillJobData } from './skill.dto';
 import { DriveService } from '../drive/drive.service';
@@ -100,6 +101,7 @@ export class SkillInvokerService {
     private readonly actionService: ActionService,
     private readonly stepService: StepService,
     private readonly creditService: CreditService,
+    private readonly billingService: BillingService,
     private readonly canvasSyncService: CanvasSyncService,
     private readonly metrics: SkillInvokeMetrics,
     private readonly ptcSdkService: PtcSdkService,
@@ -974,6 +976,7 @@ export class SkillInvokerService {
       this.toolCallService,
       this.logger,
     );
+    const pendingExecuteCodeCalls: Set<string> = new Set();
 
     try {
       // Check if already aborted before starting execution (handles queued aborts)
@@ -1136,6 +1139,7 @@ export class SkillInvokerService {
 
                 // Start PTC polling for execute_code tool (runs even without SSE connection for DB persistence)
                 if (toolName === 'execute_code') {
+                  pendingExecuteCodeCalls.add(toolCallId);
                   ptcPollerManager.start(toolCallId);
                 }
 
@@ -1214,6 +1218,14 @@ export class SkillInvokerService {
               // Stop PTC polling for execute_code tool on error (runs even without SSE connection)
               if (toolName === 'execute_code') {
                 await ptcPollerManager.stop(toolCallId);
+                try {
+                  await this.billingService.settleOrDiscardDeferredPtcBilling(toolCallId, false);
+                  pendingExecuteCodeCalls.delete(toolCallId);
+                } catch (billingError) {
+                  this.logger.error(
+                    `Deferred PTC billing discard failed for ${toolCallId}: ${billingError instanceof Error ? billingError.message : String(billingError)}`,
+                  );
+                }
               }
 
               break;
@@ -1312,9 +1324,20 @@ export class SkillInvokerService {
                 this.metrics.tool.success({ toolName, toolsetKey });
               }
 
-              // Stop PTC polling and send remaining events for execute_code tool
-              if (toolName === 'execute_code' && res) {
+              // Stop PTC polling and settle/discard deferred PTC billing for execute_code tool
+              if (toolName === 'execute_code') {
                 await ptcPollerManager.stop(toolCallId);
+                try {
+                  await this.billingService.settleOrDiscardDeferredPtcBilling(
+                    toolCallId,
+                    !isErrorStatus,
+                  );
+                  pendingExecuteCodeCalls.delete(toolCallId);
+                } catch (billingError) {
+                  this.logger.error(
+                    `Deferred PTC billing settlement failed for ${toolCallId}: ${billingError instanceof Error ? billingError.message : String(billingError)}`,
+                  );
+                }
               }
 
               break;
@@ -1666,6 +1689,25 @@ export class SkillInvokerService {
       // (redundant with abort listener but ensures cleanup in all cases)
       if (!cleanupExecuted) {
         performCleanup();
+      }
+
+      if (pendingExecuteCodeCalls.size > 0) {
+        const pendingCallIds = [...pendingExecuteCodeCalls];
+        const fallbackResults = await Promise.allSettled(
+          pendingCallIds.map((toolCallId) =>
+            this.billingService.settleOrDiscardDeferredPtcBilling(toolCallId, false),
+          ),
+        );
+
+        fallbackResults.forEach((result, index) => {
+          if (result.status === 'rejected') {
+            this.logger.error(
+              `Deferred PTC billing fallback discard failed for ${pendingCallIds[index]}: ${result.reason instanceof Error ? result.reason.message : String(result.reason)}`,
+            );
+          }
+        });
+
+        pendingExecuteCodeCalls.clear();
       }
 
       // Cleanup all PTC pollers

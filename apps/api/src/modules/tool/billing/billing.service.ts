@@ -49,6 +49,28 @@ const FREE_TOOLSET_KEYS = [
 const PROVIDER_BILLING_CACHE_TTL_MS = 5 * 60 * 1000;
 const MICRO_CREDIT_SCALE = 1_000_000;
 const ACCUMULATOR_TTL_SECONDS = 24 * 60 * 60;
+const DEFERRED_PTC_BILLING_TTL_SECONDS = 24 * 60 * 60;
+const DEFERRED_PTC_PARENT_KEY_PREFIX = 'ptc_deferred_billing:parent:';
+const DEFERRED_PTC_ENTRY_KEY_PREFIX = 'ptc_deferred_billing:entry:';
+const DEFERRED_PTC_SCAN_BATCH = 100;
+
+interface BillingChargePayload {
+  uid: string;
+  toolName: string;
+  toolsetKey: string;
+  discountedPrice: number;
+  originalPrice: number;
+  resultId?: string;
+  version?: number;
+  toolCallId?: string;
+  idempotencyKey?: string;
+}
+
+interface DeferredPtcBillingEntry extends BillingChargePayload {
+  entryId: string;
+  parentCallId: string;
+  createdAt: string;
+}
 
 @Injectable()
 export class BillingService implements OnModuleInit {
@@ -262,65 +284,38 @@ export class BillingService implements OnModuleInit {
         };
       }
 
-      const effectiveIdempotencyKey =
-        idempotencyKey ||
-        [
-          toolCallId || getToolCallId(),
-          resultId || getResultId(),
-          version ?? getResultVersion(),
-          toolsetKey,
-          toolName,
-        ]
-          .filter((part) => part !== undefined && part !== null && part !== '')
-          .join(':');
-      const normalizedIdempotencyKey =
-        effectiveIdempotencyKey || `${uid}:${toolsetKey}:${toolName}:${Date.now()}`;
-
-      const { flushCredits, remainderMicroCredits, replayed } = await this.accumulateAndFlush({
+      const chargePayload: BillingChargePayload = {
         uid,
-        microCredits: finalMicroCredits,
-        idempotencyKey: normalizedIdempotencyKey,
-      });
+        toolName,
+        toolsetKey,
+        discountedPrice: finalMicroCredits / MICRO_CREDIT_SCALE,
+        originalPrice: originalMicroCredits / MICRO_CREDIT_SCALE,
+        resultId,
+        version,
+        toolCallId,
+        idempotencyKey:
+          idempotencyKey ||
+          this.buildDefaultIdempotencyKey({
+            uid,
+            toolName,
+            toolsetKey,
+            toolCallId: toolCallId || getToolCallId(),
+            resultId: resultId || getResultId(),
+            version: version ?? getResultVersion(),
+          }),
+      };
 
-      if (replayed) {
-        this.logger.debug(
-          `Composio billing replay detected for idempotencyKey=${normalizedIdempotencyKey}`,
-        );
+      const deferred = await this.deferPtcBillingIfNeeded(chargePayload);
+      if (deferred) {
         return {
           success: true,
-          discountedPrice: 0,
-          originalPrice: originalMicroCredits / MICRO_CREDIT_SCALE,
+          discountedPrice: chargePayload.discountedPrice,
+          originalPrice: chargePayload.originalPrice,
           flushedCredits: 0,
         };
       }
 
-      if (flushCredits > 0) {
-        const jobData: SyncToolCreditUsageJobData = {
-          uid,
-          discountedPrice: flushCredits,
-          originalPrice: flushCredits,
-          timestamp: new Date(),
-          resultId: resultId ?? getResultId() ?? '',
-          version: version ?? getResultVersion() ?? 0,
-          toolCallId: toolCallId ?? getToolCallId() ?? '',
-          toolCallMeta: {
-            toolName,
-            toolsetKey,
-          },
-        };
-        await this.creditService.syncToolCreditUsage(jobData);
-      }
-
-      this.logger.debug(
-        `Composio accumulator processed ${toolsetKey}.${toolName}: micro=${finalMicroCredits}, flush=${flushCredits}, remainder=${remainderMicroCredits}`,
-      );
-
-      return {
-        success: true,
-        discountedPrice: finalMicroCredits / MICRO_CREDIT_SCALE,
-        originalPrice: originalMicroCredits / MICRO_CREDIT_SCALE,
-        flushedCredits: flushCredits,
-      };
+      return this.settleBillingCharge(chargePayload);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       this.logger.error(
@@ -496,10 +491,26 @@ export class BillingService implements OnModuleInit {
         }
       }
 
-      // Route through unified per-user accumulator for sub-credit precision
-      const microCredits = Math.round(finalDiscountedPrice * MICRO_CREDIT_SCALE);
+      const chargePayload: BillingChargePayload = {
+        uid,
+        toolName,
+        toolsetKey,
+        discountedPrice: finalDiscountedPrice,
+        originalPrice: finalOriginalPrice,
+        resultId: options.resultId,
+        version: options.version,
+        toolCallId: options.toolCallId ?? getToolCallId() ?? '',
+        idempotencyKey: this.buildDefaultIdempotencyKey({
+          uid,
+          toolName,
+          toolsetKey,
+          toolCallId: options.toolCallId ?? getToolCallId() ?? undefined,
+          resultId: options.resultId ?? getResultId() ?? undefined,
+          version: options.version ?? getResultVersion() ?? undefined,
+        }),
+      };
 
-      if (microCredits <= 0) {
+      if (chargePayload.discountedPrice <= 0) {
         this.logger.debug(
           `Dynamic billing skipped (free/zero) for ${toolsetKey}.${toolName}, uid=${uid}`,
         );
@@ -510,61 +521,17 @@ export class BillingService implements OnModuleInit {
         };
       }
 
-      const effectiveToolCallId = options.toolCallId ?? getToolCallId() ?? '';
-      const idempotencyKey =
-        [
-          toolsetKey,
-          toolName,
-          effectiveToolCallId || undefined,
-          options.resultId ?? getResultId() ?? undefined,
-          options.version ?? getResultVersion() ?? undefined,
-        ]
-          .filter((part) => part !== undefined && part !== null && part !== '')
-          .join(':') || `${uid}:${toolsetKey}:${toolName}:${Date.now()}`;
-
-      const { flushCredits, remainderMicroCredits, replayed } = await this.accumulateAndFlush({
-        uid,
-        microCredits,
-        idempotencyKey,
-      });
-
-      if (replayed) {
-        this.logger.debug(`Dynamic billing replay detected for idempotencyKey=${idempotencyKey}`);
+      const deferred = await this.deferPtcBillingIfNeeded(chargePayload);
+      if (deferred) {
         return {
           success: true,
-          discountedPrice: 0,
-          originalPrice: finalOriginalPrice,
+          discountedPrice: chargePayload.discountedPrice,
+          originalPrice: chargePayload.originalPrice,
           flushedCredits: 0,
         };
       }
 
-      if (flushCredits > 0) {
-        const jobData: SyncToolCreditUsageJobData = {
-          uid,
-          discountedPrice: flushCredits,
-          originalPrice: flushCredits,
-          timestamp: new Date(),
-          resultId: options.resultId ?? getResultId() ?? '',
-          version: options.version ?? getResultVersion() ?? 0,
-          toolCallId: effectiveToolCallId,
-          toolCallMeta: {
-            toolName,
-            toolsetKey,
-          },
-        };
-        await this.creditService.syncToolCreditUsage(jobData);
-      }
-
-      this.logger.debug(
-        `Dynamic accumulator processed ${toolsetKey}.${toolName}: micro=${microCredits}, flush=${flushCredits}, remainder=${remainderMicroCredits}`,
-      );
-
-      return {
-        success: true,
-        discountedPrice: finalDiscountedPrice,
-        originalPrice: finalOriginalPrice,
-        flushedCredits: flushCredits,
-      };
+      return this.settleBillingCharge(chargePayload);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       this.logger.error(`Failed to process billing for ${toolsetKey}.${toolName}: ${errorMessage}`);
@@ -605,6 +572,325 @@ export class BillingService implements OnModuleInit {
       this.logger.warn(`Failed to check free tool access for user ${uid}: ${error}`);
       return false;
     }
+  }
+
+  /**
+   * Settle or discard deferred PTC child billing for one parent execute_code call.
+   * Called when parent reaches terminal state in skill invoker.
+   */
+  async settleOrDiscardDeferredPtcBilling(
+    parentCallId: string,
+    parentSucceeded: boolean,
+  ): Promise<void> {
+    if (!parentCallId) {
+      return;
+    }
+
+    const lockKey = `ptc_deferred_billing:lock:${parentCallId}`;
+    const releaseLock = await this.redis.waitLock(lockKey, {
+      maxRetries: 5,
+      initialDelay: 50,
+      noThrow: true,
+      ttlSeconds: 10,
+    });
+
+    if (!releaseLock) {
+      this.logger.warn(`Skip deferred PTC settlement without lock: ${parentCallId}`);
+      return;
+    }
+
+    try {
+      const parentKey = this.getDeferredPtcParentKey(parentCallId);
+      const entryIds = await this.getDeferredPtcEntryIds(parentKey);
+      if (entryIds.length === 0) {
+        return;
+      }
+
+      const keysToDelete: string[] = [];
+
+      for (const entryId of entryIds) {
+        const entryKey = this.getDeferredPtcEntryKey(entryId);
+        keysToDelete.push(entryKey);
+
+        const raw = await this.redis.get(entryKey);
+        if (!raw) {
+          continue;
+        }
+
+        let entry: DeferredPtcBillingEntry | null = null;
+        try {
+          entry = JSON.parse(raw) as DeferredPtcBillingEntry;
+        } catch (error) {
+          this.logger.warn(
+            `Failed to parse deferred PTC billing entry ${entryId}: ${error instanceof Error ? error.message : String(error)}`,
+          );
+          continue;
+        }
+
+        if (!entry) {
+          continue;
+        }
+
+        if (!parentSucceeded) {
+          continue;
+        }
+
+        if (await this.hasExistingToolUsage(entry.toolCallId)) {
+          continue;
+        }
+
+        await this.settleBillingCharge(entry);
+      }
+
+      await this.redis.delMany(keysToDelete);
+      await this.removeProcessedDeferredPtcEntryIds(parentKey, entryIds);
+    } finally {
+      if (releaseLock) {
+        await releaseLock();
+      }
+    }
+  }
+
+  private buildDefaultIdempotencyKey(args: {
+    uid: string;
+    toolName: string;
+    toolsetKey: string;
+    toolCallId?: string;
+    resultId?: string;
+    version?: number;
+  }): string {
+    const { uid, toolName, toolsetKey, toolCallId, resultId, version } = args;
+    return (
+      [toolsetKey, toolName, toolCallId, resultId, version]
+        .filter((part) => part !== undefined && part !== null && part !== '')
+        .join(':') || `${uid}:${toolsetKey}:${toolName}:${Date.now()}`
+    );
+  }
+
+  private getDeferredPtcParentKey(parentCallId: string): string {
+    return `${DEFERRED_PTC_PARENT_KEY_PREFIX}${parentCallId}`;
+  }
+
+  private getDeferredPtcEntryKey(entryId: string): string {
+    return `${DEFERRED_PTC_ENTRY_KEY_PREFIX}${entryId}`;
+  }
+
+  private async resolvePtcParentCallId(toolCallId?: string): Promise<string | null> {
+    if (!toolCallId) {
+      return null;
+    }
+
+    const childCall = await this.prisma.toolCallResult.findUnique({
+      where: { callId: toolCallId },
+      select: {
+        type: true,
+        ptcCallId: true,
+      },
+    });
+
+    if (!childCall || childCall.type !== 'ptc' || !childCall.ptcCallId) {
+      return null;
+    }
+
+    return childCall.ptcCallId;
+  }
+
+  private async deferPtcBillingIfNeeded(payload: BillingChargePayload): Promise<boolean> {
+    const parentCallId = await this.resolvePtcParentCallId(payload.toolCallId);
+    if (!parentCallId) {
+      return false;
+    }
+
+    const idempotencyKey =
+      payload.idempotencyKey ||
+      this.buildDefaultIdempotencyKey({
+        uid: payload.uid,
+        toolName: payload.toolName,
+        toolsetKey: payload.toolsetKey,
+        toolCallId: payload.toolCallId,
+        resultId: payload.resultId,
+        version: payload.version,
+      });
+    const entryId = Buffer.from(idempotencyKey).toString('base64url');
+    const entry: DeferredPtcBillingEntry = {
+      ...payload,
+      idempotencyKey,
+      entryId,
+      parentCallId,
+      createdAt: new Date().toISOString(),
+    };
+
+    await this.enqueueDeferredPtcBillingEntry(entry);
+
+    const parentCall = await this.prisma.toolCallResult.findUnique({
+      where: { callId: parentCallId },
+      select: { status: true },
+    });
+
+    if (parentCall?.status === 'completed') {
+      await this.settleOrDiscardDeferredPtcBilling(parentCallId, true);
+    } else if (parentCall?.status === 'failed') {
+      await this.settleOrDiscardDeferredPtcBilling(parentCallId, false);
+    }
+
+    return true;
+  }
+
+  private async enqueueDeferredPtcBillingEntry(entry: DeferredPtcBillingEntry): Promise<void> {
+    const entryKey = this.getDeferredPtcEntryKey(entry.entryId);
+    const inserted = await this.redis.setIfNotExists(
+      entryKey,
+      JSON.stringify(entry),
+      DEFERRED_PTC_BILLING_TTL_SECONDS,
+    );
+
+    if (!inserted) {
+      return;
+    }
+
+    const parentKey = this.getDeferredPtcParentKey(entry.parentCallId);
+
+    try {
+      const client = this.redis.getClient();
+      await client.sadd(parentKey, entry.entryId);
+      await client.expire(parentKey, DEFERRED_PTC_BILLING_TTL_SECONDS);
+    } catch {
+      const currentEntryIds = (await this.redis.getJSON<string[]>(parentKey)) ?? [];
+      if (!currentEntryIds.includes(entry.entryId)) {
+        currentEntryIds.push(entry.entryId);
+        await this.redis.setJSON(parentKey, currentEntryIds, DEFERRED_PTC_BILLING_TTL_SECONDS);
+      }
+    }
+  }
+
+  private async getDeferredPtcEntryIds(parentKey: string): Promise<string[]> {
+    try {
+      const client = this.redis.getClient();
+      return await client.smembers(parentKey);
+    } catch {
+      return (await this.redis.getJSON<string[]>(parentKey)) ?? [];
+    }
+  }
+
+  private async removeProcessedDeferredPtcEntryIds(
+    parentKey: string,
+    processedEntryIds: string[],
+  ): Promise<void> {
+    if (processedEntryIds.length === 0) {
+      return;
+    }
+
+    try {
+      const client = this.redis.getClient();
+      await client.srem(parentKey, ...processedEntryIds);
+      const remaining = await client.scard(parentKey);
+      if (remaining === 0) {
+        await this.redis.del(parentKey);
+      }
+      return;
+    } catch {
+      const existing = (await this.redis.getJSON<string[]>(parentKey)) ?? [];
+      const toRemove = new Set(processedEntryIds);
+      const remaining = existing.filter((entryId) => !toRemove.has(entryId));
+      if (remaining.length === 0) {
+        await this.redis.del(parentKey);
+      } else {
+        await this.redis.setJSON(parentKey, remaining, DEFERRED_PTC_BILLING_TTL_SECONDS);
+      }
+    }
+  }
+
+  private async hasExistingToolUsage(toolCallId?: string): Promise<boolean> {
+    if (!toolCallId) {
+      return false;
+    }
+
+    const usage = await this.prisma.creditUsage.findFirst({
+      where: {
+        toolCallId,
+        usageType: 'tool_call',
+      },
+      select: { pk: true },
+    });
+
+    return !!usage;
+  }
+
+  private async settleBillingCharge(payload: BillingChargePayload): Promise<ProcessBillingResult> {
+    const {
+      uid,
+      toolName,
+      toolsetKey,
+      discountedPrice,
+      originalPrice,
+      resultId,
+      version,
+      toolCallId,
+    } = payload;
+
+    const microCredits = Math.round(discountedPrice * MICRO_CREDIT_SCALE);
+    if (microCredits <= 0) {
+      return {
+        success: true,
+        discountedPrice: 0,
+        originalPrice,
+      };
+    }
+
+    const idempotencyKey =
+      payload.idempotencyKey ||
+      this.buildDefaultIdempotencyKey({
+        uid,
+        toolName,
+        toolsetKey,
+        toolCallId,
+        resultId,
+        version,
+      });
+
+    const { flushCredits, remainderMicroCredits, replayed } = await this.accumulateAndFlush({
+      uid,
+      microCredits,
+      idempotencyKey,
+    });
+
+    if (replayed) {
+      this.logger.debug(`Dynamic billing replay detected for idempotencyKey=${idempotencyKey}`);
+      return {
+        success: true,
+        discountedPrice: 0,
+        originalPrice,
+        flushedCredits: 0,
+      };
+    }
+
+    if (flushCredits > 0) {
+      const jobData: SyncToolCreditUsageJobData = {
+        uid,
+        discountedPrice: flushCredits,
+        originalPrice: flushCredits,
+        timestamp: new Date(),
+        resultId: resultId ?? getResultId() ?? '',
+        version: version ?? getResultVersion() ?? 0,
+        toolCallId: toolCallId ?? getToolCallId() ?? '',
+        toolCallMeta: {
+          toolName,
+          toolsetKey,
+        },
+      };
+      await this.creditService.syncToolCreditUsage(jobData);
+    }
+
+    this.logger.debug(
+      `Dynamic accumulator processed ${toolsetKey}.${toolName}: micro=${microCredits}, flush=${flushCredits}, remainder=${remainderMicroCredits}`,
+    );
+
+    return {
+      success: true,
+      discountedPrice,
+      originalPrice,
+      flushedCredits: flushCredits,
+    };
   }
 
   private async loadProviderBillingConfigs(): Promise<Map<string, ProviderBillingConfig>> {
@@ -755,6 +1041,52 @@ export class BillingService implements OnModuleInit {
         normalized.includes('support')) ||
       (normalized.includes('not implemented') && normalized.includes('eval'))
     );
+  }
+
+  /**
+   * Periodic reconciliation for deferred PTC billing entries.
+   * Retries settlement/discard if inline trigger failed transiently.
+   */
+  @Cron('*/1 * * * *')
+  async reconcileDeferredPtcBilling(): Promise<void> {
+    try {
+      const client = this.redis.getClient();
+      const pattern = `${DEFERRED_PTC_PARENT_KEY_PREFIX}*`;
+      const parentKeys: string[] = [];
+
+      let cursor = '0';
+      do {
+        const [nextCursor, foundKeys] = await client.scan(
+          cursor,
+          'MATCH',
+          pattern,
+          'COUNT',
+          DEFERRED_PTC_SCAN_BATCH,
+        );
+        cursor = nextCursor;
+        parentKeys.push(...foundKeys);
+      } while (cursor !== '0');
+
+      for (const parentKey of parentKeys) {
+        const parentCallId = parentKey.replace(DEFERRED_PTC_PARENT_KEY_PREFIX, '');
+        if (!parentCallId) {
+          continue;
+        }
+
+        const parentCall = await this.prisma.toolCallResult.findUnique({
+          where: { callId: parentCallId },
+          select: { status: true },
+        });
+
+        if (parentCall?.status === 'completed') {
+          await this.settleOrDiscardDeferredPtcBilling(parentCallId, true);
+        } else if (parentCall?.status === 'failed') {
+          await this.settleOrDiscardDeferredPtcBilling(parentCallId, false);
+        }
+      }
+    } catch (error) {
+      this.logger.warn(`Deferred PTC billing reconciliation skipped: ${error}`);
+    }
   }
 
   /**

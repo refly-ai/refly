@@ -112,6 +112,12 @@ describe('BillingService.processBilling', () => {
         findUnique: jest.fn().mockResolvedValue(null),
         upsert: jest.fn(),
       },
+      toolCallResult: {
+        findUnique: jest.fn().mockResolvedValue(null),
+      },
+      creditUsage: {
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
       $queryRaw: jest.fn().mockResolvedValue([]),
     };
 
@@ -120,12 +126,39 @@ describe('BillingService.processBilling', () => {
       syncToolCreditUsage: jest.fn().mockResolvedValue(undefined),
     };
 
+    const redisStore = new Map<string, string>();
+
     // Mock RedisService — simulate accumulator that always flushes immediately
     const mockClient = {
       exists: jest.fn().mockResolvedValue(1),
+      sadd: jest.fn().mockImplementation(async (key: string, value: string) => {
+        const raw = redisStore.get(key);
+        const setValues = raw ? new Set(JSON.parse(raw) as string[]) : new Set<string>();
+        setValues.add(value);
+        redisStore.set(key, JSON.stringify([...setValues]));
+        return 1;
+      }),
+      smembers: jest.fn().mockImplementation(async (key: string) => {
+        const raw = redisStore.get(key);
+        return raw ? (JSON.parse(raw) as string[]) : [];
+      }),
+      srem: jest.fn().mockImplementation(async (key: string, ...values: string[]) => {
+        const raw = redisStore.get(key);
+        const existing = raw ? new Set(JSON.parse(raw) as string[]) : new Set<string>();
+        for (const value of values) {
+          existing.delete(value);
+        }
+        redisStore.set(key, JSON.stringify([...existing]));
+        return 1;
+      }),
+      scard: jest.fn().mockImplementation(async (key: string) => {
+        const raw = redisStore.get(key);
+        return raw ? (JSON.parse(raw) as string[]).length : 0;
+      }),
+      expire: jest.fn().mockResolvedValue(1),
       eval: jest.fn().mockImplementation(async (...args: any[]) => {
-        const microCredits = Number(args[2]);
-        const scale = Number(args[5]);
+        const microCredits = Number(args[4]);
+        const scale = Number(args[7]);
         const flushCredits = Math.floor(microCredits / scale);
         const remainder = microCredits - flushCredits * scale;
         return [flushCredits, remainder, 0]; // [flush, remainder, replayed]
@@ -137,9 +170,35 @@ describe('BillingService.processBilling', () => {
 
     mockRedis = {
       getClient: () => mockClient,
-      get: jest.fn().mockResolvedValue('0'),
-      setex: jest.fn().mockResolvedValue('OK'),
+      get: jest.fn().mockImplementation(async (key: string) => redisStore.get(key) ?? null),
+      setex: jest.fn().mockImplementation(async (key: string, _ttl: number, value: string) => {
+        redisStore.set(key, value);
+        return 'OK';
+      }),
       existsBoolean: jest.fn().mockResolvedValue(false),
+      setIfNotExists: jest.fn().mockImplementation(async (key: string, value: string) => {
+        if (redisStore.has(key)) {
+          return false;
+        }
+        redisStore.set(key, value);
+        return true;
+      }),
+      getJSON: jest.fn().mockImplementation(async (key: string) => {
+        const raw = redisStore.get(key);
+        return raw ? JSON.parse(raw) : null;
+      }),
+      setJSON: jest.fn().mockImplementation(async (key: string, value: unknown) => {
+        redisStore.set(key, JSON.stringify(value));
+      }),
+      del: jest.fn().mockImplementation(async (key: string) => {
+        redisStore.delete(key);
+      }),
+      delMany: jest.fn().mockImplementation(async (keys: string[]) => {
+        for (const key of keys) {
+          redisStore.delete(key);
+        }
+      }),
+      waitLock: jest.fn().mockResolvedValue(async () => true),
     };
 
     // Construct service
