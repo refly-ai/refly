@@ -424,7 +424,7 @@ export class SkillInvokerService {
 
       // Calculate PTC status based on user and toolsets (highest priority)
       const ptcConfig = getPtcConfig(this.config);
-      const toolsetKeys = toolsets.map((t) => t.id);
+      const toolsetKeys = toolsets.map((t) => t?.toolset?.key ?? t?.id ?? '');
       let ptcEnabled = isPtcEnabledForToolsets(user, toolsetKeys, ptcConfig);
 
       // Debug mode: title-based filtering, applied only when base check already permits PTC.
