@@ -235,7 +235,7 @@ jobs:
             --arg apiTag "$API_TAG" \
             --arg webTag "$WEB_TAG" \
             '{
-              repository: "refly-ai/refly-infra",
+              repository: "powerformer/apps",
               environment: $environment,
               syncMode: $syncMode,
               changes: [
