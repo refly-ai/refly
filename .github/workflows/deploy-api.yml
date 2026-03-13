@@ -119,11 +119,62 @@ jobs:
           cache-from: type=registry,ref=${{ steps.docker_tags.outputs.repository }}:buildcache
           cache-to: type=registry,ref=${{ steps.docker_tags.outputs.repository }}:buildcache,mode=max
 
-      - name: Update kubeconfig for EKS cluster
+      - name: Call Orbit sync API
+        env:
+          ORBIT_API_URL: ${{ vars.ORBIT_API_URL }}
+          ORBIT_API_KEY: ${{ secrets.ORBIT_API_KEY }}
+          IMAGE_TAG: ${{ steps.docker_tags.outputs.image_tag }}
         run: |
-          aws eks update-kubeconfig --name ${{ inputs.eks_cluster_name }} --region ${{ inputs.aws_region }}
+          set -euo pipefail
 
-      - name: Update API deployment image on EKS
-        run: |
-          kubectl set image deployment/${{ inputs.deployment_name }} refly-api=${{ steps.docker_tags.outputs.deploy_image }} -n refly-app
-          kubectl rollout status deployment/${{ inputs.deployment_name }} -n refly-app --timeout=600s
+          ORBIT_ENVIRONMENT="${{ inputs.environment }}"
+          VALUES_FILE_PATH="kubernetes/envs/${{ inputs.environment }}/refly-api/values.yaml"
+
+          if [ "$ORBIT_ENVIRONMENT" = "staging" ]; then
+            ORBIT_ENVIRONMENT="prod"
+            VALUES_FILE_PATH="kubernetes/prod/refly-api-staging/values.yaml"
+          fi
+
+          PAYLOAD=$(jq -n \
+            --arg repository "powerformer/apps" \
+            --arg environment "$ORBIT_ENVIRONMENT" \
+            --arg syncMode "directCommit" \
+            --arg imageTag "$IMAGE_TAG" \
+            --arg valuesFilePath "$VALUES_FILE_PATH" \
+            '{
+              repository: $repository,
+              environment: $environment,
+              syncMode: $syncMode,
+              changes: [
+                {
+                  application: "refly-api",
+                  valuesFilePath: $valuesFilePath,
+                  valuesContent: ({image: {tag: $imageTag}} | tojson)
+                }
+              ]
+            }')
+
+          echo "Sync payload:"
+          echo "$PAYLOAD" | jq .
+
+          RESPONSE=$(curl -fsS -X POST "$ORBIT_API_URL/api/app/sync" \
+            -H "Content-Type: application/json" \
+            -H "X-Orbit-API-Key: $ORBIT_API_KEY" \
+            -d "$PAYLOAD")
+
+          echo "Orbit sync response:"
+          echo "$RESPONSE" | jq .
+
+          SUCCESS=$(echo "$RESPONSE" | jq -r '.success // false')
+          if [ "$SUCCESS" != "true" ]; then
+            ERROR_MSG=$(echo "$RESPONSE" | jq -r '.error // .message // "Unknown error"')
+            echo "Orbit sync failed: $ERROR_MSG"
+            exit 1
+          fi
+
+          PR_URL=$(echo "$RESPONSE" | jq -r '.data.prUrl // .data.pullRequestUrl // .data.url // empty')
+          if [ -n "$PR_URL" ]; then
+            echo "Orbit sync succeeded: $PR_URL"
+          else
+            echo "Orbit sync succeeded"
+          fi
