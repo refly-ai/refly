@@ -6,8 +6,9 @@ import { useNavigate } from '@refly-packages/ai-workspace-common/utils/router';
 import { useSiderStoreShallow } from '@refly/stores';
 import { useAuthStoreShallow } from '@refly/stores';
 import { LuCheck } from 'react-icons/lu';
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { logEvent } from '@refly/telemetry-web';
 
 import {
   IconX,
@@ -17,6 +18,7 @@ import {
   IconLanguage,
 } from '@refly-packages/ai-workspace-common/components/common/icon';
 import { UILocaleList } from '@refly-packages/ai-workspace-common/components/ui-locale-list';
+import { NexuGuestCard } from '@refly-packages/ai-workspace-common/components/nexu-promotion';
 import { DownOutlined } from '@ant-design/icons';
 
 export const SiderLoggedOut = (props: { source: 'sider' | 'popover' }) => {
@@ -29,6 +31,11 @@ export const SiderLoggedOut = (props: { source: 'sider' | 'popover' }) => {
   const { setLoginModalOpen } = useAuthStoreShallow((state) => ({
     setLoginModalOpen: state.setLoginModalOpen,
   }));
+
+  // Log guest page view for nexu promotion
+  useEffect(() => {
+    logEvent('refly_nexu_guest_module_shown');
+  }, []);
 
   // Key feature IDs for mapping through translations
   const keyFeatureIds = useMemo(
@@ -82,6 +89,9 @@ export const SiderLoggedOut = (props: { source: 'sider' | 'popover' }) => {
           <Button type="primary" className="w-full mt-4" onClick={() => setLoginModalOpen(true)}>
             {t('landingPage.tryItNow')}
           </Button>
+
+          {/* Nexu promotion card for guest users */}
+          <NexuGuestCard className="w-full mt-4" />
         </div>
         <Divider className="my-2" />
         {/* Language Selector */}

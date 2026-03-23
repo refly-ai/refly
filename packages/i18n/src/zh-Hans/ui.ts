@@ -4995,6 +4995,27 @@ const translations = {
     connect: '连接',
     connected: '已连接',
   },
+  nexuPromotion: {
+    stickyBar: {
+      text: 'The simplest desktop client for OpenClaw — bridge your Agent to WeChat, Feishu, Slack & Discord in one click',
+    },
+    modal: {
+      title: '在飞书、微信里用 OpenClaw？试试 nexu',
+      subtitle: '开源桌面客户端，把 Agent 接到常用 IM；与 Refly 工作流互补。',
+      feature1: '连接微信 / 飞书 / Slack / Discord',
+      feature2: '本机运行，数据以本机为主',
+      feature3: 'MIT 开源，可 fork 与自托管',
+      downloadBtn: '去 nexu 下载',
+      dismissBtn: '我已知晓',
+      neverShow: '不再弹出',
+    },
+    guest: {
+      title: 'The simplest desktop client for OpenClaw — bridge your Agent to WeChat, Feishu, Slack & Discord in one click.',
+      feature1: 'Works with Claude Code, Codex & any LLM.',
+      feature2: 'BYOK, local-first, chat on your phone 24/7.',
+      cta: '前往 nexu',
+    },
+  },
 };
 
 export default translations;

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { FrontPage } from '@refly-packages/ai-workspace-common/components/canvas/front-page';
+import { NexuModal } from '@refly-packages/ai-workspace-common/components/nexu-promotion';
 import { logEvent } from '@refly/telemetry-web';
 import {
   usePendingVoucherClaim,
@@ -31,6 +32,7 @@ const WorkspacePage = () => {
   return (
     <div className="w-full h-full flex flex-col">
       <FrontPage />
+      <NexuModal />
     </div>
   );
 };
