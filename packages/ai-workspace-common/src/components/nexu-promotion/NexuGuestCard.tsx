@@ -1,4 +1,4 @@
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from 'antd';
 import { cn } from '@refly/utils/cn';
@@ -14,6 +14,11 @@ interface NexuGuestCardProps {
 
 export const NexuGuestCard = memo(({ className }: NexuGuestCardProps) => {
   const { t } = useTranslation();
+
+  // Log shown event when component mounts
+  useEffect(() => {
+    logEvent('refly_nexu_guest_module_shown');
+  }, []);
 
   const handleClick = useCallback(() => {
     logEvent('refly_nexu_guest_module_click_nexu');

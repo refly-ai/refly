@@ -19,7 +19,8 @@ export const NexuStickyBar = memo(({ className }: NexuStickyBarProps) => {
     logEvent('refly_nexu_workbench_sticky_shown');
   }, []);
 
-  const handleClick = useCallback(() => {
+  const handleClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
     logEvent('refly_nexu_workbench_sticky_click');
     window.open(NEXU_URL, '_blank');
   }, []);

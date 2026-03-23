@@ -6,9 +6,8 @@ import { useNavigate } from '@refly-packages/ai-workspace-common/utils/router';
 import { useSiderStoreShallow } from '@refly/stores';
 import { useAuthStoreShallow } from '@refly/stores';
 import { LuCheck } from 'react-icons/lu';
-import { useMemo, useEffect } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { logEvent } from '@refly/telemetry-web';
 
 import {
   IconX,
@@ -31,11 +30,6 @@ export const SiderLoggedOut = (props: { source: 'sider' | 'popover' }) => {
   const { setLoginModalOpen } = useAuthStoreShallow((state) => ({
     setLoginModalOpen: state.setLoginModalOpen,
   }));
-
-  // Log guest page view for nexu promotion
-  useEffect(() => {
-    logEvent('refly_nexu_guest_module_shown');
-  }, []);
 
   // Key feature IDs for mapping through translations
   const keyFeatureIds = useMemo(
