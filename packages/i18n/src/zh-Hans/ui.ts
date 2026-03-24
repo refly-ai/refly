@@ -5000,8 +5000,8 @@ const translations = {
       text: '最简洁的 OpenClaw 桌面客户端——一键将 Agent 接入微信、飞书、Slack 和 Discord',
     },
     modal: {
-      title: 'The simplest desktop client for OpenClaw',
-      subtitle: 'Bridge your Agent to WeChat, Feishu, Slack & Discord in one click.',
+      title: '最简洁的 OpenClaw 桌面客户端',
+      subtitle: '一键将 Agent 接入微信、飞书、Slack 和 Discord。',
       feature1: '连接微信 / 飞书 / Slack / Discord',
       feature2: '本机运行，数据以本机为主',
       feature3: 'MIT 开源，可 fork 与自托管',

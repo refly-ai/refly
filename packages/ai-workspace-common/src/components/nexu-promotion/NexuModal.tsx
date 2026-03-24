@@ -85,7 +85,8 @@ export const NexuModal = memo(({ open: controlledOpen }: NexuModalProps) => {
       onCancel={handleClose}
       footer={null}
       centered
-      width={480}
+      width="fit-content"
+      style={{ maxWidth: 640 }}
       className="nexu-modal"
       styles={{
         body: { padding: 0 },
@@ -96,7 +97,7 @@ export const NexuModal = memo(({ open: controlledOpen }: NexuModalProps) => {
         <div className="flex items-center gap-3 mb-4">
           <NexuIcon size={36} className="text-[#2c2a2b] dark:text-white flex-shrink-0" />
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white m-0">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white m-0 whitespace-nowrap">
               {t('nexuPromotion.modal.title')}
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 m-0">
