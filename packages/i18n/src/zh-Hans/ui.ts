@@ -5000,14 +5000,13 @@ const translations = {
       text: '最简洁的 OpenClaw 桌面客户端——一键将 Agent 接入微信、飞书、Slack 和 Discord',
     },
     modal: {
-      title: '在飞书、微信里用 OpenClaw？试试 nexu',
-      subtitle: '开源桌面客户端，把 Agent 接到常用 IM；与 Refly 工作流互补。',
+      title: 'The simplest desktop client for OpenClaw',
+      subtitle: 'Bridge your Agent to WeChat, Feishu, Slack & Discord in one click.',
       feature1: '连接微信 / 飞书 / Slack / Discord',
       feature2: '本机运行，数据以本机为主',
       feature3: 'MIT 开源，可 fork 与自托管',
       downloadBtn: '去 nexu 下载',
-      dismissBtn: '我已知晓',
-      neverShow: '不再弹出',
+      neverShow: '我已知晓，不再弹出',
     },
     guest: {
       title: '最简洁的 OpenClaw 桌面客户端——一键将 Agent 接入微信、飞书、Slack 和 Discord。',

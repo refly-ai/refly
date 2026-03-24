@@ -356,6 +356,9 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
         classnames,
       )}
     >
+      {/* Nexu promotion sticky bar */}
+      {source === 'frontPage' && <NexuStickyBar className="w-full mb-4" />}
+
       <div className="flex items-center gap-3 mb-6">
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -373,9 +376,6 @@ export const PureCopilot = memo(({ source, classnames, onFloatingChange }: PureC
           {t('copilot.greeting.title')}
         </div>
       </div>
-
-      {/* Nexu promotion sticky bar */}
-      {source === 'frontPage' && <NexuStickyBar className="w-full mb-4" />}
 
       <div
         className="w-full relative"

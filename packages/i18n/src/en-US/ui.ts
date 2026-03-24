@@ -4990,19 +4990,16 @@ const translations = {
       text: 'The simplest desktop client for OpenClaw — bridge your Agent to IM in one click',
     },
     modal: {
-      title: 'Using OpenClaw in Feishu or WeChat? Try nexu',
-      subtitle:
-        'Open-source desktop client that bridges your Agent to common IMs; complements Refly workflows.',
+      title: 'The simplest desktop client for OpenClaw',
+      subtitle: 'Bridge your Agent to WeChat, Feishu, Slack & Discord in one click.',
       feature1: 'Connect WeChat / Feishu / Slack / Discord',
       feature2: 'Runs locally, data stays on your machine',
       feature3: 'MIT open source, fork and self-host friendly',
       downloadBtn: 'Download nexu',
-      dismissBtn: 'Got it',
-      neverShow: "Don't show again",
+      neverShow: "Got it, don't show again",
     },
     guest: {
-      title:
-        'The simplest desktop client for OpenClaw — bridge your Agent to IM in one click.',
+      title: 'The simplest desktop client for OpenClaw — bridge your Agent to IM in one click.',
       feature1: 'Works with Claude Code, Codex & any LLM.',
       feature2: 'BYOK, local-first, chat on your phone 24/7.',
       cta: 'Go to nexu',

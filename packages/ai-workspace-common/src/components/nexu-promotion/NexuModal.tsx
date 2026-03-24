@@ -94,9 +94,7 @@ export const NexuModal = memo(({ open: controlledOpen }: NexuModalProps) => {
       <div className="p-6">
         {/* Header */}
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#0E9F77] to-[#0a7d5e] flex items-center justify-center">
-            <NexuIcon size={28} className="text-white" />
-          </div>
+          <NexuIcon size={36} className="text-[#2c2a2b] dark:text-white flex-shrink-0" />
           <div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white m-0">
               {t('nexuPromotion.modal.title')}
@@ -135,18 +133,13 @@ export const NexuModal = memo(({ open: controlledOpen }: NexuModalProps) => {
             {t('nexuPromotion.modal.downloadBtn')}
           </Button>
 
-          <div className="flex items-center justify-between">
-            <Checkbox
-              checked={neverShow}
-              onChange={(e) => handleNeverShowChange(e.target.checked)}
-              className="text-sm text-gray-500 dark:text-gray-400"
-            >
-              {t('nexuPromotion.modal.neverShow')}
-            </Checkbox>
-            <Button type="link" onClick={handleClose} className="!text-gray-500 !p-0">
-              {t('nexuPromotion.modal.dismissBtn')}
-            </Button>
-          </div>
+          <Checkbox
+            checked={neverShow}
+            onChange={(e) => handleNeverShowChange(e.target.checked)}
+            className="text-sm text-gray-500 dark:text-gray-400"
+          >
+            {t('nexuPromotion.modal.neverShow')}
+          </Checkbox>
         </div>
       </div>
     </Modal>
