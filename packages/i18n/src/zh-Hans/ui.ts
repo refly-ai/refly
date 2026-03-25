@@ -5005,7 +5005,7 @@ const translations = {
       feature1: '连接微信 / 飞书 / Slack / Discord',
       feature2: '本机运行，数据以本机为主',
       feature3: 'MIT 开源，可 fork 与自托管',
-      downloadBtn: '去 nexu 下载',
+      downloadBtn: '前往 nexu',
       neverShow: '我已知晓，不再弹出',
     },
     guest: {
