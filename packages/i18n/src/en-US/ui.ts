@@ -4995,7 +4995,7 @@ const translations = {
       feature1: 'Connect WeChat / Feishu / Slack / Discord',
       feature2: 'Runs locally, data stays on your machine',
       feature3: 'MIT open source, fork and self-host friendly',
-      downloadBtn: 'Download nexu',
+      downloadBtn: 'Get nexu',
       neverShow: "Got it, don't show again",
     },
     guest: {

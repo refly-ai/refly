@@ -8,6 +8,7 @@ import { LuMessageSquare, LuShield, LuGitFork } from 'react-icons/lu';
 
 const NEXU_URL = 'https://nexu.io';
 const STORAGE_KEY = 'nexu_modal_dismissed';
+const SESSION_KEY = 'nexu_modal_shown_this_session';
 
 interface NexuModalProps {
   open?: boolean;
@@ -19,15 +20,22 @@ export const NexuModal = memo(({ open: controlledOpen }: NexuModalProps) => {
   const [neverShow, setNeverShow] = useState(false);
 
   useEffect(() => {
-    // Check if user has dismissed the modal before
+    // Check if user has permanently dismissed the modal
     const dismissed = localStorage.getItem(STORAGE_KEY);
     if (dismissed === 'true') {
+      return;
+    }
+
+    // Only show once per browser session (avoid re-showing on SPA navigation)
+    const shownThisSession = sessionStorage.getItem(SESSION_KEY);
+    if (shownThisSession === 'true') {
       return;
     }
 
     // Show modal after a short delay
     const timer = setTimeout(() => {
       setVisible(true);
+      sessionStorage.setItem(SESSION_KEY, 'true');
       logEvent('refly_nexu_workbench_modal_shown');
     }, 1000);
 
