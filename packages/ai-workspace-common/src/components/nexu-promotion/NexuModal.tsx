@@ -8,7 +8,9 @@ import { LuMessageSquare, LuShield, LuGitFork } from 'react-icons/lu';
 
 const NEXU_URL = 'https://nexu.io';
 const STORAGE_KEY = 'nexu_modal_dismissed';
-const SESSION_KEY = 'nexu_modal_shown_this_session';
+
+// Module-level flag: resets on page refresh, persists across SPA navigation
+let hasShownThisPageLoad = false;
 
 interface NexuModalProps {
   open?: boolean;
@@ -26,16 +28,15 @@ export const NexuModal = memo(({ open: controlledOpen }: NexuModalProps) => {
       return;
     }
 
-    // Only show once per browser session (avoid re-showing on SPA navigation)
-    const shownThisSession = sessionStorage.getItem(SESSION_KEY);
-    if (shownThisSession === 'true') {
+    // Only show once per page load (avoid re-showing on SPA navigation)
+    if (hasShownThisPageLoad) {
       return;
     }
 
     // Show modal after a short delay
     const timer = setTimeout(() => {
       setVisible(true);
-      sessionStorage.setItem(SESSION_KEY, 'true');
+      hasShownThisPageLoad = true;
       logEvent('refly_nexu_workbench_modal_shown');
     }, 1000);
 
