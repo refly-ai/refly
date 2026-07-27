@@ -1525,7 +1525,11 @@ export class ToolService {
       this.logger.error(
         `Error during MCP client operation (initializeConnections or getTools): ${mcpError?.stack}`,
       );
-      await closeClient('operation failure');
+      // Terminal failure path: close best-effort; do not let close errors abort skill invoke
+      // (previous behavior degraded to empty MCP tools).
+      await closeClient('operation failure').catch(() => {
+        // Already logged in closeClient
+      });
       return { tools: [], cleanup: noopCleanup };
     }
   }

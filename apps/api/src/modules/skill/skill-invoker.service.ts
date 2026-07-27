@@ -1706,15 +1706,27 @@ export class SkillInvokerService {
       // Cleanup PTC pollers
       ptcPollerManager?.cleanup();
 
-      // Unregister the abort controller
-      this.actionService.unregisterAbortController(resultId);
+      // Unregister the abort controller (must not throw past finally into skipped persistence)
+      try {
+        this.actionService.unregisterAbortController(resultId);
+      } catch (unregisterError) {
+        this.logger.error(
+          `Failed to unregister abort controller for ${resultId}: ${(unregisterError as Error)?.message}`,
+        );
+      }
 
       // Note: @langfuse/langchain v4 CallbackHandler creates OTEL spans via startAndRegisterOtelSpan()
       // These spans are processed by LangfuseSpanProcessor which handles batching and export
       // No manual flush needed - the span processor has its own export interval
 
       for (const artifact of Object.values(artifactMap)) {
-        artifact.connection?.disconnect();
+        try {
+          artifact.connection?.disconnect();
+        } catch (disconnectError) {
+          this.logger.error(
+            `Failed to disconnect artifact connection for ${resultId}: ${(disconnectError as Error)?.message}`,
+          );
+        }
       }
 
       // Stop MessageAggregator auto-save timer even if flush/persist fails below
@@ -1836,16 +1848,14 @@ export class SkillInvokerService {
           `Failed fallback status update for ${resultId}: ${(fallbackError as Error)?.message}`,
         );
       }
-      try {
-        writeSSEResponse(res, { event: 'end', resultId, version });
-      } catch {
-        // ignore SSE failures during cleanup
-      }
+      // Do not emit SSE `end` here — streamInvokeSkill catch emits `error` on HTTP path.
+      // Emitting `end` first would mark the client action finished before the error event.
       // Propagate so queue workers can fail the job (streamInvokeSkill rethrows when !res)
       throw persistError;
     }
 
-    // Best-effort side effects — failures here must not undo required status persistence
+    // Best-effort side effects — failures here must not undo required status persistence.
+    // Canvas sync is isolated so a collab failure cannot skip usage/billing/cache cleanup.
     try {
       if (result.workflowNodeExecutionId) {
         const nodeExecution = await this.prisma.workflowNodeExecution.findUnique({
@@ -1885,7 +1895,13 @@ export class SkillInvokerService {
           );
         }
       }
+    } catch (canvasSyncError) {
+      this.logger.error(
+        `Best-effort canvas status sync failed for ${resultId}: ${(canvasSyncError as Error)?.stack ?? canvasSyncError}`,
+      );
+    }
 
+    try {
       // Check if we need to auto-name the target canvas
       if (data.target?.entityType === 'canvas' && !result.errors.length) {
         const canvas = await this.prisma.canvas.findFirst({
