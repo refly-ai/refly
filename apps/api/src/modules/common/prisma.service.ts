@@ -44,9 +44,20 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
           normalizedQuery.startsWith('update') ||
           normalizedQuery.startsWith('delete');
         if (isWriteQuery) {
-          this.logger.log(`query: ${e.query}, param: ${e.params}, duration: ${e.duration}ms`);
+          // Never log params in production — they often contain tokens/API keys/PII.
+          // Only log a short query prefix + duration for operational signal.
+          const query =
+            typeof e.query === 'string' ? this.truncateForLog(e.query, 200) : String(e.query ?? '');
+          this.logger.log(`query: ${query}, duration: ${e.duration}ms`);
         }
       }
     });
+  }
+
+  private truncateForLog(value: string, maxLen: number): string {
+    if (value.length <= maxLen) {
+      return value;
+    }
+    return `${value.slice(0, maxLen)}...[truncated ${value.length - maxLen} chars]`;
   }
 }

@@ -23,14 +23,22 @@ import { CustomWsAdapter } from './utils/adapters/ws-adapter';
 import { setupStatsig } from '@refly/telemetry-node';
 import { migrateDbSchema, seedDatabase } from './utils/prisma';
 import { initTokenizer } from '@refly/utils/token';
+import {
+  getSentryProfilesSampleRate,
+  getSentryTracesSampleRate,
+  isSentryEnabled,
+} from './utils/sentry';
 
-Sentry.init({
-  dsn: process.env.SENTRY_DSN,
-  integrations: [nodeProfilingIntegration()],
-  environment: process.env.NODE_ENV,
-  tracesSampleRate: 1.0, //  Capture 100% of the transactions
-  profilesSampleRate: 1.0,
-});
+if (isSentryEnabled()) {
+  const profilesSampleRate = getSentryProfilesSampleRate();
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    integrations: profilesSampleRate > 0 ? [nodeProfilingIntegration()] : [],
+    environment: process.env.NODE_ENV,
+    tracesSampleRate: getSentryTracesSampleRate(),
+    profilesSampleRate,
+  });
+}
 
 async function bootstrap() {
   // Initialize tokenizer from CDN
@@ -58,14 +66,18 @@ async function bootstrap() {
   process.on('uncaughtException', (err) => {
     const stack = (err as Error)?.stack ?? String(err);
     logger.error(`main process uncaughtException: ${stack}`);
-    Sentry.captureException(err);
+    if (isSentryEnabled()) {
+      Sentry.captureException(err);
+    }
     // Do not exit; keep the process alive. Investigate recurring errors via Sentry logs.
   });
 
   process.on('unhandledRejection', (err) => {
     const message = (err as Error)?.stack ?? String(err);
     logger.error(`main process unhandledRejection: ${message}`);
-    Sentry.captureException(err as any);
+    if (isSentryEnabled()) {
+      Sentry.captureException(err as any);
+    }
     // Do not exit; keep the process alive. Investigate recurring errors via Sentry logs.
   });
 

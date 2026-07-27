@@ -18,6 +18,8 @@ export default () => ({
   },
   image: {
     maxArea: Number.parseInt(process.env.IMAGE_MAX_AREA) || 600 * 600,
+    // Keep historical default. Prefer setting IMAGE_PAYLOAD_MODE=url in env after provider canary.
+    // Note: current skill drive images use DRIVE_PAYLOAD_MODE, not this setting.
     payloadMode: process.env.IMAGE_PAYLOAD_MODE || 'base64', // 'url' or 'base64'
     presignExpiry: Number.parseInt(process.env.IMAGE_PRESIGN_EXPIRY) || 15 * 60, // 15 minutes
   },

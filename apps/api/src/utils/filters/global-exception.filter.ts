@@ -15,6 +15,7 @@ import { getRPCMetadata, RPCType } from '@opentelemetry/core';
 import * as Sentry from '@sentry/node';
 import { OAuthError, UnknownError } from '@refly/errors';
 import { genBaseRespDataFromError } from '../exception';
+import { isSentryEnabled } from '../sentry';
 import { User } from '@prisma/client';
 
 @Catch()
@@ -108,12 +109,14 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     }
 
     if (baseRespData.errCode === new UnknownError().code) {
-      Sentry.captureException(exception, {
-        user: {
-          id: user?.uid,
-          email: user?.email,
-        },
-      });
+      if (isSentryEnabled()) {
+        Sentry.captureException(exception, {
+          user: {
+            id: user?.uid,
+            email: user?.email,
+          },
+        });
+      }
 
       const safeBody = this.getSafeBodyForLogging(request.body);
       this.logger.error(

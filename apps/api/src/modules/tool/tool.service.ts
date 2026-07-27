@@ -69,6 +69,8 @@ export interface InstantiatedTools {
   builtInToolsets: GenericToolset[];
   // Non-builtin toolsets (regular + MCP + OAuth)
   nonBuiltInToolsets: GenericToolset[];
+  /** Release long-lived resources (e.g. MCP clients). Safe to call multiple times. */
+  cleanup?: () => Promise<void>;
 }
 
 @Injectable()
@@ -1100,17 +1102,36 @@ export class ToolService {
     const regularToolsets = toolsets.filter((t) => t.type === ToolsetType.REGULAR && !t.builtin);
     const mcpServers = toolsets.filter((t) => t.type === ToolsetType.MCP);
 
-    const [regularTools, mcpTools, oauthToolsets] = await Promise.all([
-      this.instantiateRegularToolsets(user, regularToolsets, engine, options),
-      this.instantiateMcpServers(user, mcpServers),
-      this.composioService.instantiateToolsets(user, toolsets, 'oauth'),
-    ]);
+    // Keep MCP promise separate so a sibling failure can still close an opened client
+    const mcpResultPromise = this.instantiateMcpServers(user, mcpServers);
+
+    let regularTools: StructuredToolInterface[] = [];
+    let mcpResult: { tools: StructuredToolInterface[]; cleanup: () => Promise<void> };
+    let oauthToolsets: StructuredToolInterface[] = [];
+
+    try {
+      [regularTools, mcpResult, oauthToolsets] = await Promise.all([
+        this.instantiateRegularToolsets(user, regularToolsets, engine, options),
+        mcpResultPromise,
+        this.composioService.instantiateToolsets(user, toolsets, 'oauth'),
+      ]);
+    } catch (error) {
+      // If MCP connected but regular/oauth failed, Promise.all rejects without returning cleanup.
+      // Do not await MCP startup here — a slow/unreachable MCP would block the already-known
+      // sibling error. Attach eventual cleanup in the background.
+      void mcpResultPromise
+        .then((opened) => opened.cleanup())
+        .catch(() => {
+          // Prefer the original Promise.all error; cleanup failures are best-effort
+        });
+      throw error;
+    }
 
     // Categorize tools: builtIn (builtin + copilot) and nonBuiltIn (regular + MCP + OAuth)
     const builtIn = [...builtinTools, ...copilotTools];
     const nonBuiltIn = [
       ...(Array.isArray(regularTools) ? regularTools : []),
-      ...(Array.isArray(mcpTools) ? mcpTools : []),
+      ...(Array.isArray(mcpResult.tools) ? mcpResult.tools : []),
       ...(Array.isArray(oauthToolsets) ? oauthToolsets : []),
     ];
     const all = [...builtIn, ...nonBuiltIn];
@@ -1132,6 +1153,7 @@ export class ToolService {
       nonBuiltIn,
       builtInToolsets,
       nonBuiltInToolsets,
+      cleanup: mcpResult.cleanup,
     };
   }
 
@@ -1437,13 +1459,16 @@ export class ToolService {
 
   /**
    * Instantiate selected MCP servers into structured tools, by creating a MCP client and getting the tools.
+   * Caller must invoke `cleanup` after the skill finishes so the MCP client/sockets are released.
    */
   private async instantiateMcpServers(
     user: User,
     mcpServers: GenericToolset[],
-  ): Promise<StructuredToolInterface[]> {
+  ): Promise<{ tools: StructuredToolInterface[]; cleanup: () => Promise<void> }> {
+    const noopCleanup = async () => undefined;
+
     if (!mcpServers?.length) {
-      return [];
+      return { tools: [], cleanup: noopCleanup };
     }
 
     const mcpServerNames = mcpServers.map((s) => s.name);
@@ -1451,8 +1476,21 @@ export class ToolService {
       .listMcpServers(user, { enabled: true })
       .then((data) => data.filter((item) => mcpServerNames.includes(item.name)));
 
-    // TODO: should return cleanup function to close the client
     let tempMcpClient: MultiServerMCPClient | undefined;
+    let closed = false;
+    const closeClient = async (reason: string) => {
+      if (!tempMcpClient || closed) {
+        return;
+      }
+      try {
+        await tempMcpClient.close();
+        closed = true;
+      } catch (closeError) {
+        // Allow a later cleanup attempt if close failed (e.g. transient transport error)
+        this.logger.error(`Error closing MCP client (${reason}):`, closeError);
+        throw closeError;
+      }
+    };
 
     try {
       // Pass mcpServersResponse (which is ListMcpServersResponse) to convertMcpServersToClientConfig
@@ -1469,37 +1507,31 @@ export class ToolService {
         this.logger.warn(
           `No MCP tools found for user ${user.uid} after initializing client. Proceeding without MCP tools.`,
         );
-        if (tempMcpClient) {
-          await tempMcpClient
-            .close()
-            .catch((closeError) =>
-              this.logger.error(
-                'Error closing MCP client when no tools found after connection:',
-                closeError,
-              ),
-            );
-        }
-      } else {
-        this.logger.log(
-          `Loaded ${toolsFromMcp.length} MCP tools: ${toolsFromMcp
-            .map((tool) => tool.name)
-            .join(', ')}`,
-        );
+        await closeClient('no tools found after connection');
+        return { tools: [], cleanup: noopCleanup };
       }
 
-      return toolsFromMcp;
+      this.logger.log(
+        `Loaded ${toolsFromMcp.length} MCP tools: ${toolsFromMcp
+          .map((tool) => tool.name)
+          .join(', ')}`,
+      );
+
+      // Keep client open while tools are in use; skill-invoker finally calls cleanup.
+      return {
+        tools: toolsFromMcp,
+        cleanup: () => closeClient('skill invoke finished'),
+      };
     } catch (mcpError) {
       this.logger.error(
         `Error during MCP client operation (initializeConnections or getTools): ${mcpError?.stack}`,
       );
-      if (tempMcpClient) {
-        await tempMcpClient
-          .close()
-          .catch((closeError) =>
-            this.logger.error('Error closing MCP client after operation failure:', closeError),
-          );
-      }
-      return [];
+      // Terminal failure path: close best-effort; do not let close errors abort skill invoke
+      // (previous behavior degraded to empty MCP tools).
+      await closeClient('operation failure').catch(() => {
+        // Already logged in closeClient
+      });
+      return { tools: [], cleanup: noopCleanup };
     }
   }
 
