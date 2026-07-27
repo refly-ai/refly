@@ -1116,13 +1116,14 @@ export class ToolService {
         this.composioService.instantiateToolsets(user, toolsets, 'oauth'),
       ]);
     } catch (error) {
-      // If MCP connected but regular/oauth failed, Promise.all rejects without returning cleanup
-      try {
-        const opened = await mcpResultPromise;
-        await opened.cleanup();
-      } catch {
-        // Prefer the original Promise.all error
-      }
+      // If MCP connected but regular/oauth failed, Promise.all rejects without returning cleanup.
+      // Do not await MCP startup here — a slow/unreachable MCP would block the already-known
+      // sibling error. Attach eventual cleanup in the background.
+      void mcpResultPromise
+        .then((opened) => opened.cleanup())
+        .catch(() => {
+          // Prefer the original Promise.all error; cleanup failures are best-effort
+        });
       throw error;
     }
 

@@ -1901,6 +1901,16 @@ export class SkillInvokerService {
       );
     }
 
+    // Terminal SSE event immediately after required persistence (+ canvas sync).
+    // Do not wait for auto-name / usage / billing — clients stop polling on `end`.
+    try {
+      writeSSEResponse(res, { event: 'end', resultId, version });
+    } catch (sseError) {
+      this.logger.warn(
+        `Failed to write SSE end for ${resultId}: ${(sseError as Error)?.message ?? sseError}`,
+      );
+    }
+
     try {
       // Check if we need to auto-name the target canvas
       if (data.target?.entityType === 'canvas' && !result.errors.length) {
@@ -1941,14 +1951,6 @@ export class SkillInvokerService {
     } catch (sideEffectError) {
       this.logger.error(
         `Best-effort post-invoke side effects failed for ${resultId}: ${(sideEffectError as Error)?.stack ?? sideEffectError}`,
-      );
-    }
-
-    try {
-      writeSSEResponse(res, { event: 'end', resultId, version });
-    } catch (sseError) {
-      this.logger.warn(
-        `Failed to write SSE end for ${resultId}: ${(sseError as Error)?.message ?? sseError}`,
       );
     }
   }
