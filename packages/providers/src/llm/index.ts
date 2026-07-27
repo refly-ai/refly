@@ -44,6 +44,42 @@ const selectBedrockRegion = (extraParams: BedrockExtraParams): string => {
   );
 };
 
+/**
+ * @langchain/aws only infers tool_choice support for Claude 3/4 name patterns.
+ * Claude 5+ IDs (e.g. claude-opus-5, claude-sonnet-5) fall through and throw
+ * before the request is sent. Override when the model is Claude and the
+ * provider item has not explicitly disabled tool_choice.
+ */
+const resolveBedrockToolChoiceValues = (
+  modelId: string,
+  supportToolChoice?: boolean,
+): Array<'auto' | 'any' | 'tool'> | undefined => {
+  if (supportToolChoice === false) {
+    return undefined;
+  }
+
+  const id = modelId.toLowerCase();
+  const isClaude =
+    id.includes('claude-3') ||
+    id.includes('claude-4') ||
+    id.includes('claude-5') ||
+    id.includes('claude-opus') ||
+    id.includes('claude-sonnet') ||
+    id.includes('claude-haiku') ||
+    id.includes('claude-fable') ||
+    id.includes('claude-mythos');
+
+  if (isClaude) {
+    return ['auto', 'any', 'tool'];
+  }
+
+  if (id.includes('mistral-large')) {
+    return ['auto', 'any'];
+  }
+
+  return undefined;
+};
+
 export const getChatModel = (
   provider: BaseProvider,
   config: LLMModelConfig,
@@ -108,12 +144,18 @@ export const getChatModel = (
 
       try {
         const apiKeyConfig = JSON.parse(provider.apiKey) as BedrockApiKeyConfig;
+        const supportsToolChoiceValues = resolveBedrockToolChoiceValues(
+          config.modelId,
+          config?.capabilities?.supportToolChoice,
+        );
+
         model = new ChatBedrockConverse({
           model: config.modelId,
           region: selectedRegion,
           credentials: apiKeyConfig,
           maxTokens: config?.maxOutput,
           ...bedrockCommonParams,
+          ...(supportsToolChoiceValues ? { supportsToolChoiceValues } : {}),
           ...(config?.capabilities?.reasoning
             ? {
                 additionalModelRequestFields: {
