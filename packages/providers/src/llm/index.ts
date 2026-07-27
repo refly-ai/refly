@@ -50,7 +50,7 @@ const selectBedrockRegion = (extraParams: BedrockExtraParams): string => {
  * before the request is sent. Override when the model is Claude and the
  * provider item has not explicitly disabled tool_choice.
  */
-const resolveBedrockToolChoiceValues = (
+export const resolveBedrockToolChoiceValues = (
   modelId: string,
   supportToolChoice?: boolean,
 ): Array<'auto' | 'any' | 'tool'> | undefined => {
