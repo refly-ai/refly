@@ -200,7 +200,11 @@ export class SkillPackageExecutorService {
       },
       {
         removeOnComplete: true,
-        removeOnFail: false,
+        // Failure details live in DB (skillExecution); keep only a short Redis window.
+        removeOnFail: {
+          age: 7 * 24 * 3600,
+          count: 200,
+        },
         attempts: 1, // Retries handled internally
       },
     );
@@ -287,7 +291,10 @@ export class SkillPackageExecutorService {
             },
             {
               removeOnComplete: true,
-              removeOnFail: false,
+              removeOnFail: {
+                age: 7 * 24 * 3600,
+                count: 200,
+              },
             },
           );
         });
@@ -463,7 +470,14 @@ export class SkillPackageExecutorService {
         await this.workflowQueue.add(
           'execute-workflow',
           { ...job, retryCount: workflowExec.retryCount + 1 },
-          { delay: backoff },
+          {
+            delay: backoff,
+            removeOnComplete: true,
+            removeOnFail: {
+              age: 7 * 24 * 3600,
+              count: 200,
+            },
+          },
         );
       } else {
         // Mark as failed

@@ -128,7 +128,9 @@ export class ScheduleEventListener {
   private async decrementRedisCounter(uid: string, isErrorHandler = false): Promise<boolean> {
     try {
       const redisKey = `${SCHEDULE_REDIS_KEYS.USER_CONCURRENT_PREFIX}${uid}`;
-      await this.redisService.decr(redisKey);
+      // Refresh TTL on decr so a half-finished counter cannot outlive the window.
+      const ttlSeconds = this.config.get<number>('schedule.userConcurrentTtl') ?? 2 * 60 * 60;
+      await this.redisService.decr(redisKey, ttlSeconds);
       const context = isErrorHandler ? 'in error handler' : '';
       this.logger.debug(`Decremented Redis counter for user ${uid} ${context}`);
       return true;

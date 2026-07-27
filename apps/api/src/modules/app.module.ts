@@ -148,9 +148,21 @@ class CustomThrottlerGuard extends ThrottlerGuard {
             useFactory: (redisService: RedisService) => {
               return {
                 connection: redisService.getClient(),
+                // Bound BullMQ event streams so pub/sub history cannot grow without limit.
+                // Job payloads are cleaned via defaultJobOptions; streams are independent.
+                streams: {
+                  events: {
+                    maxLen: 1000,
+                  },
+                },
                 defaultJobOptions: {
+                  // Completed jobs (esp. skill payloads) can be multi-MB — delete immediately.
                   removeOnComplete: true,
-                  removeOnFail: true,
+                  // Keep a short, bounded failure window for debugging; never unbounded.
+                  removeOnFail: {
+                    age: 7 * 24 * 3600, // 7 days
+                    count: 200,
+                  },
                 },
               };
             },

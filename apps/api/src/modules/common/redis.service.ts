@@ -205,9 +205,26 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     return item.value;
   }
 
-  async incr(key: string): Promise<number> {
+  /**
+   * Increment a counter. When ttlSeconds is provided, EXPIRE is applied in the
+   * same Redis round-trip so a crash between INCR and EXPIRE cannot leave a
+   * permanent key (the production ElastiCache leak class for bare counters).
+   */
+  async incr(key: string, ttlSeconds?: number): Promise<number> {
+    if (ttlSeconds !== undefined && (!Number.isInteger(ttlSeconds) || ttlSeconds <= 0)) {
+      throw new RangeError(`ttlSeconds must be a positive integer, received ${ttlSeconds}`);
+    }
+
     if (this.client) {
       try {
+        if (ttlSeconds) {
+          const script = `
+            local count = redis.call('INCR', KEYS[1])
+            redis.call('EXPIRE', KEYS[1], ARGV[1])
+            return count
+          `;
+          return (await this.client.eval(script, 1, key, ttlSeconds)) as number;
+        }
         return await this.client.incr(key);
       } catch (error) {
         this.logger.error(`Redis INCR failed: key=${key}, error=${error}`);
@@ -224,16 +241,44 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
 
     const newValue = currentValue + 1;
-    const expiresAt = item?.expiresAt ?? Date.now() + 24 * 60 * 60 * 1000; // Default 24h expiry if not set
+    const defaultTtlMs = 24 * 60 * 60 * 1000;
+    const expiresAt = ttlSeconds
+      ? Date.now() + ttlSeconds * 1000
+      : (item?.expiresAt ?? Date.now() + defaultTtlMs);
     this.inMemoryStore.set(key, { value: newValue.toString(), expiresAt });
 
     return newValue;
   }
 
-  async decr(key: string): Promise<number> {
+  /**
+   * Decrement a counter. Optional ttlSeconds refreshes EXPIRE atomically with DECR.
+   * When the value reaches <= 0 the key is deleted to avoid sticky zero counters.
+   */
+  async decr(key: string, ttlSeconds?: number): Promise<number> {
+    if (ttlSeconds !== undefined && (!Number.isInteger(ttlSeconds) || ttlSeconds <= 0)) {
+      throw new RangeError(`ttlSeconds must be a positive integer, received ${ttlSeconds}`);
+    }
+
     if (this.client) {
       try {
-        return await this.client.decr(key);
+        if (ttlSeconds) {
+          const script = `
+            local count = redis.call('DECR', KEYS[1])
+            if count <= 0 then
+              redis.call('DEL', KEYS[1])
+              return 0
+            end
+            redis.call('EXPIRE', KEYS[1], ARGV[1])
+            return count
+          `;
+          return (await this.client.eval(script, 1, key, ttlSeconds)) as number;
+        }
+        const count = await this.client.decr(key);
+        if (count <= 0) {
+          await this.client.del(key);
+          return 0;
+        }
+        return count;
       } catch (error) {
         this.logger.error(`Redis DECR failed: key=${key}, error=${error}`);
         throw error;
@@ -249,7 +294,14 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
 
     const newValue = Math.max(0, currentValue - 1);
-    const expiresAt = item?.expiresAt ?? Date.now() + 24 * 60 * 60 * 1000; // Default 24h expiry if not set
+    if (newValue <= 0) {
+      this.inMemoryStore.delete(key);
+      return 0;
+    }
+    const defaultTtlMs = 24 * 60 * 60 * 1000;
+    const expiresAt = ttlSeconds
+      ? Date.now() + ttlSeconds * 1000
+      : (item?.expiresAt ?? Date.now() + defaultTtlMs);
     this.inMemoryStore.set(key, { value: newValue.toString(), expiresAt });
 
     return newValue;

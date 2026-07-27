@@ -30,7 +30,12 @@ import { ScheduleEventListener } from './schedule.listener';
       defaultJobOptions: {
         attempts: 1, // No automatic retry on failure, user must manually retry
         removeOnComplete: true,
-        removeOnFail: false, // Keep failed jobs for debugging/retry
+        // Keep a bounded window of failures for debugging/manual retry — never unbounded.
+        // (Was removeOnFail: false, which retained every failed job forever in Redis.)
+        removeOnFail: {
+          age: 7 * 24 * 3600,
+          count: 200,
+        },
       },
     }),
     WorkflowModule,
