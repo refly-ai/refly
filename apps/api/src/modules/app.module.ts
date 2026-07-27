@@ -158,11 +158,10 @@ class CustomThrottlerGuard extends ThrottlerGuard {
                 defaultJobOptions: {
                   // Completed jobs (esp. skill payloads) can be multi-MB — delete immediately.
                   removeOnComplete: true,
-                  // Keep a short, bounded failure window for debugging; never unbounded.
-                  removeOnFail: {
-                    age: 7 * 24 * 3600, // 7 days
-                    count: 200,
-                  },
+                  // Global default: drop failures immediately. Queues that need a short
+                  // debug window (schedule, skill-package) override removeOnFail locally.
+                  // Keeping failures here would reintroduce bull:skill:* memory pressure.
+                  removeOnFail: true,
                 },
               };
             },

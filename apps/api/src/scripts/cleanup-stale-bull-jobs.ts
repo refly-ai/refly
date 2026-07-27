@@ -7,16 +7,28 @@
  *   npx ts-node -r tsconfig-paths/register src/scripts/cleanup-stale-bull-jobs.ts
  *
  * Safety:
- * - Only deletes job hashes that are members of `:completed` or `:failed` zsets
- *   (or orphan numeric job hashes older than MAX_AGE_MS with finishedOn set).
+ * - Uses BullMQ Queue.clean (atomic Lua) for completed/failed jobs only.
  * - Never touches :wait / :active / :delayed / :paused / locks / meta.
  * - DRY_RUN=1 (default) only prints counts.
  */
+import { Queue } from 'bullmq';
 import Redis from 'ioredis';
 
 const DRY_RUN = process.env.DRY_RUN !== '0';
-const MAX_AGE_MS = Number(process.env.MAX_AGE_MS ?? 7 * 24 * 3600 * 1000);
-const BATCH = Number(process.env.BATCH ?? 200);
+
+function parsePositiveInt(name: string, raw: string | undefined, defaultValue: number): number {
+  if (raw === undefined || raw === '') {
+    return defaultValue;
+  }
+  const n = Number(raw);
+  if (!Number.isFinite(n) || !Number.isInteger(n) || n <= 0) {
+    throw new Error(`${name} must be a positive finite integer, got: ${JSON.stringify(raw)}`);
+  }
+  return n;
+}
+
+const MAX_AGE_MS = parsePositiveInt('MAX_AGE_MS', process.env.MAX_AGE_MS, 7 * 24 * 3600 * 1000);
+const BATCH = parsePositiveInt('BATCH', process.env.BATCH, 200);
 const QUEUES = (
   process.env.QUEUES ??
   'skill,syncTokenUsage,syncRequestUsage,sandbox-execute-request,runWorkflow,autoNameCanvas,imageProcessing,scheduleExecution,scaleboxExecute,createShare,skillExecution,skillWorkflow'
@@ -25,11 +37,17 @@ const QUEUES = (
   .map((s) => s.trim())
   .filter(Boolean);
 
-function createClient(): Redis {
+function isRedisTlsEnabled(): boolean {
+  const v = process.env.REDIS_TLS;
+  return v === '1' || v === 'true';
+}
+
+function createRedis(): Redis {
+  const tls = isRedisTlsEnabled() ? {} : undefined;
   if (process.env.REDIS_URL) {
     return new Redis(process.env.REDIS_URL, {
       maxRetriesPerRequest: null,
-      tls: process.env.REDIS_TLS === '1' ? {} : undefined,
+      tls,
     });
   }
   return new Redis({
@@ -37,91 +55,93 @@ function createClient(): Redis {
     port: Number(process.env.REDIS_PORT ?? 6379),
     username: process.env.REDIS_USERNAME,
     password: process.env.REDIS_PASSWORD,
-    tls: process.env.REDIS_TLS === '1' || process.env.REDIS_TLS === 'true' ? {} : undefined,
+    tls,
     maxRetriesPerRequest: null,
   });
 }
 
-async function drainZsetJobs(
-  redis: Redis,
-  queue: string,
+/**
+ * Remove completed/failed jobs older than MAX_AGE_MS via BullMQ's atomic clean.
+ */
+async function drainState(
+  queue: Queue,
   state: 'completed' | 'failed',
-  cutoff: number,
 ): Promise<{ scanned: number; deleted: number }> {
-  const zkey = `bull:${queue}:${state}`;
-  const type = await redis.type(zkey);
-  if (type !== 'zset') {
-    return { scanned: 0, deleted: 0 };
-  }
-
   let scanned = 0;
   let deleted = 0;
-  let start = 0;
 
-  // Scores in BullMQ completed/failed zsets are finishedOn timestamps (ms).
+  if (DRY_RUN) {
+    // Approximate: count finished jobs older than cutoff without mutating.
+    // getJobs may yield undefined for orphaned zset entries — skip those.
+    const cutoff = Date.now() - MAX_AGE_MS;
+    let start = 0;
+    while (true) {
+      const jobs = await queue.getJobs([state], start, start + BATCH - 1, true);
+      if (jobs.length === 0) break;
+      const stale = jobs.filter(
+        (j) => j != null && (j.finishedOn ?? 0) > 0 && (j.finishedOn ?? 0) <= cutoff,
+      );
+      scanned += stale.length;
+      deleted += stale.length;
+      if (jobs.length < BATCH) break;
+      start += jobs.length;
+    }
+    return { scanned, deleted };
+  }
+
   while (true) {
-    const batch = await redis.zrangebyscore(zkey, '-inf', cutoff, 'LIMIT', start, BATCH);
-    if (batch.length === 0) break;
-
-    scanned += batch.length;
-    const jobKeys = batch.map((id) => `bull:${queue}:${id}`);
-
-    if (DRY_RUN) {
-      deleted += jobKeys.length;
-      // Advance by batch size; dry-run does not mutate so use offset.
-      start += batch.length;
-      if (batch.length < BATCH) break;
-      continue;
-    }
-
-    const pipeline = redis.pipeline();
-    for (const id of batch) {
-      pipeline.del(`bull:${queue}:${id}`);
-      pipeline.zrem(zkey, id);
-    }
-    await pipeline.exec();
-    deleted += batch.length;
-    // After delete, next oldest is still at the front — do not advance start.
-    if (batch.length < BATCH) break;
+    // grace = MAX_AGE_MS: clean jobs finished more than MAX_AGE_MS ago.
+    const removed = await queue.clean(MAX_AGE_MS, BATCH, state);
+    scanned += removed.length;
+    deleted += removed.length;
+    if (removed.length < BATCH) break;
   }
 
   return { scanned, deleted };
 }
 
-async function trimEventsStream(redis: Redis, queue: string, maxLen: number): Promise<number> {
-  const key = `bull:${queue}:events`;
+async function trimEventsStream(redis: Redis, queueName: string, maxLen: number): Promise<number> {
+  const key = `bull:${queueName}:events`;
   const type = await redis.type(key);
   if (type !== 'stream') return 0;
   if (DRY_RUN) {
     const len = await redis.xlen(key);
     return Math.max(0, len - maxLen);
   }
-  // Approximate trim to maxLen entries
-  await redis.xtrim(key, 'MAXLEN', '~', maxLen);
-  return maxLen;
+  // XTRIM returns the number of entries actually removed.
+  return await redis.xtrim(key, 'MAXLEN', '~', maxLen);
 }
 
-async function main() {
-  const redis = createClient();
-  const cutoff = Date.now() - MAX_AGE_MS;
+async function main(): Promise<void> {
+  const redis = createRedis();
+
   console.log(
     JSON.stringify({
       dryRun: DRY_RUN,
-      cutoffIso: new Date(cutoff).toISOString(),
+      cutoffIso: new Date(Date.now() - MAX_AGE_MS).toISOString(),
       maxAgeMs: MAX_AGE_MS,
+      batch: BATCH,
       queues: QUEUES,
     }),
   );
 
+  const queues: Queue[] = [];
   try {
     await redis.ping();
-    for (const queue of QUEUES) {
-      const completed = await drainZsetJobs(redis, queue, 'completed', cutoff);
-      const failed = await drainZsetJobs(redis, queue, 'failed', cutoff);
-      const eventsTrimmed = await trimEventsStream(redis, queue, 1000);
+    for (const name of QUEUES) {
+      // Share the non-blocking client; skipMetasUpdate so we do not overwrite
+      // bull:<queue>:meta (e.g. streams.events.maxLen set by the app).
+      const queue = new Queue(name, {
+        connection: redis,
+        skipMetasUpdate: true,
+      });
+      queues.push(queue);
+      const completed = await drainState(queue, 'completed');
+      const failed = await drainState(queue, 'failed');
+      const eventsTrimmed = await trimEventsStream(redis, name, 1000);
       console.log(
         JSON.stringify({
-          queue,
+          queue: name,
           completed,
           failed,
           eventsTrimmedApprox: eventsTrimmed,
@@ -129,6 +149,8 @@ async function main() {
       );
     }
   } finally {
+    // close() only drops BullMQ listeners on a shared client; quit the client after.
+    await Promise.all(queues.map((q) => q.close()));
     await redis.quit();
   }
 

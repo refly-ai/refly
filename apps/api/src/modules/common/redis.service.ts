@@ -242,9 +242,12 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
     const newValue = currentValue + 1;
     const defaultTtlMs = 24 * 60 * 60 * 1000;
+    // Only reuse expiry when the existing item is still valid; expired items get a fresh TTL.
     const expiresAt = ttlSeconds
       ? Date.now() + ttlSeconds * 1000
-      : (item?.expiresAt ?? Date.now() + defaultTtlMs);
+      : item && !this.isExpired(item)
+        ? item.expiresAt
+        : Date.now() + defaultTtlMs;
     this.inMemoryStore.set(key, { value: newValue.toString(), expiresAt });
 
     return newValue;
@@ -253,6 +256,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   /**
    * Decrement a counter. Optional ttlSeconds refreshes EXPIRE atomically with DECR.
    * When the value reaches <= 0 the key is deleted to avoid sticky zero counters.
+   * DECR+DEL always runs in one Lua script so a concurrent INCR cannot be wiped.
    */
   async decr(key: string, ttlSeconds?: number): Promise<number> {
     if (ttlSeconds !== undefined && (!Number.isInteger(ttlSeconds) || ttlSeconds <= 0)) {
@@ -261,24 +265,24 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
     if (this.client) {
       try {
-        if (ttlSeconds) {
-          const script = `
-            local count = redis.call('DECR', KEYS[1])
-            if count <= 0 then
-              redis.call('DEL', KEYS[1])
-              return 0
-            end
+        // Always atomic: DECR then DEL-if-<=0 (and optional EXPIRE) in one round-trip.
+        const script = `
+          local count = redis.call('DECR', KEYS[1])
+          if count <= 0 then
+            redis.call('DEL', KEYS[1])
+            return 0
+          end
+          if ARGV[1] ~= '' then
             redis.call('EXPIRE', KEYS[1], ARGV[1])
-            return count
-          `;
-          return (await this.client.eval(script, 1, key, ttlSeconds)) as number;
-        }
-        const count = await this.client.decr(key);
-        if (count <= 0) {
-          await this.client.del(key);
-          return 0;
-        }
-        return count;
+          end
+          return count
+        `;
+        return (await this.client.eval(
+          script,
+          1,
+          key,
+          ttlSeconds ? String(ttlSeconds) : '',
+        )) as number;
       } catch (error) {
         this.logger.error(`Redis DECR failed: key=${key}, error=${error}`);
         throw error;
@@ -301,7 +305,9 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     const defaultTtlMs = 24 * 60 * 60 * 1000;
     const expiresAt = ttlSeconds
       ? Date.now() + ttlSeconds * 1000
-      : (item?.expiresAt ?? Date.now() + defaultTtlMs);
+      : item && !this.isExpired(item)
+        ? item.expiresAt
+        : Date.now() + defaultTtlMs;
     this.inMemoryStore.set(key, { value: newValue.toString(), expiresAt });
 
     return newValue;
