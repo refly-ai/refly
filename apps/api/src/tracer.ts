@@ -69,7 +69,14 @@ export function initTracer(): void {
   // OTLP trace exporter for Tempo/Grafana - receives all spans
   if (otlp.tracesUrl) {
     const traceExporter = new OTLPTraceExporter({ url: otlp.tracesUrl });
-    spanProcessors.push(new BatchSpanProcessor(traceExporter));
+    // Bound in-process span queues to limit RSS growth under backpressure
+    spanProcessors.push(
+      new BatchSpanProcessor(traceExporter, {
+        maxQueueSize: 2048,
+        maxExportBatchSize: 512,
+        scheduledDelayMillis: 5000,
+      }),
+    );
   }
 
   // Langfuse processor - receives filtered LLM spans only
@@ -93,7 +100,15 @@ export function initTracer(): void {
   sdk = new NodeSDK({
     spanProcessors: spanProcessors.length > 0 ? spanProcessors : undefined,
     metricReader,
-    instrumentations: [getNodeAutoInstrumentations()],
+    instrumentations: [
+      getNodeAutoInstrumentations({
+        // High-cardinality / high-volume instrumentations that inflate RSS without much product value
+        '@opentelemetry/instrumentation-fs': { enabled: false },
+        '@opentelemetry/instrumentation-dns': { enabled: false },
+        '@opentelemetry/instrumentation-net': { enabled: false },
+        '@opentelemetry/instrumentation-generic-pool': { enabled: false },
+      }),
+    ],
     resource: resourceFromAttributes({
       [ATTR_SERVICE_NAME]: 'reflyd',
     }),

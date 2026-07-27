@@ -442,7 +442,11 @@ export class CollabService {
   }
 
   async modifyDocument(documentName: string, update: string) {
-    const { document } = await this.server.openDirectConnection(documentName);
-    incrementalMarkdownUpdate(document, update);
+    const connection = await this.server.openDirectConnection(documentName);
+    try {
+      incrementalMarkdownUpdate(connection.document, update);
+    } finally {
+      await connection.disconnect().catch(() => undefined);
+    }
   }
 }

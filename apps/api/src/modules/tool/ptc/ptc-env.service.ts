@@ -22,6 +22,8 @@ interface CachedApiKey {
 
 /** Cache TTL: 12 hours (leaves buffer before the 1-day key expiration) */
 const API_KEY_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
+/** Hard cap on cached entries (evict oldest when exceeded) */
+const API_KEY_CACHE_MAX_SIZE = 500;
 
 @Injectable()
 export class PtcEnvService {
@@ -69,16 +71,43 @@ export class PtcEnvService {
    * Get a cached API key for the user, or create a new one if expired/missing.
    */
   private async getOrCreateApiKey(uid: string): Promise<string> {
+    this.evictApiKeyCache();
+
     const cached = this.apiKeyCache.get(uid);
     if (cached && Date.now() - cached.createdAt < API_KEY_CACHE_TTL_MS) {
+      // Refresh insertion order for LRU-ish eviction (Map preserves order)
+      this.apiKeyCache.delete(uid);
+      this.apiKeyCache.set(uid, cached);
       return cached.apiKey;
+    }
+    if (cached) {
+      this.apiKeyCache.delete(uid);
     }
 
     const sessionName = `PTC_SESSION_${uid}`;
     const created = await this.apiKeyService.createApiKey(uid, sessionName, 1);
 
     this.apiKeyCache.set(uid, { apiKey: created.apiKey, createdAt: Date.now() });
+    this.evictApiKeyCache();
 
     return created.apiKey;
+  }
+
+  /** Drop expired entries, then oldest entries if still over the hard cap. */
+  private evictApiKeyCache(): void {
+    const now = Date.now();
+    for (const [cachedUid, entry] of this.apiKeyCache) {
+      if (now - entry.createdAt >= API_KEY_CACHE_TTL_MS) {
+        this.apiKeyCache.delete(cachedUid);
+      }
+    }
+
+    while (this.apiKeyCache.size > API_KEY_CACHE_MAX_SIZE) {
+      const oldestKey = this.apiKeyCache.keys().next().value as string | undefined;
+      if (oldestKey === undefined) {
+        break;
+      }
+      this.apiKeyCache.delete(oldestKey);
+    }
   }
 }

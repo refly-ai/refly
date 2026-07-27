@@ -265,7 +265,10 @@ export class SkillInvokerService {
     data: InvokeSkillJobData & {
       eventListener?: (data: SkillEvent) => void;
     },
-  ): Promise<SkillRunnableConfig> {
+  ): Promise<{
+    config: SkillRunnableConfig;
+    cleanupResources?: () => Promise<void>;
+  }> {
     const {
       context,
       tplConfig,
@@ -410,72 +413,87 @@ export class SkillInvokerService {
       ).then((messages) => messages.flat());
     }
 
-    if (toolsets?.length > 0) {
-      const tools = await this.toolService.instantiateToolsets(user, toolsets, this.skillEngine, {
-        context,
-      });
+    let cleanupResources: (() => Promise<void>) | undefined;
 
-      // Inject categorized tools and toolsets into config
-      config.configurable.selectedTools = tools.all as any;
-      config.configurable.builtInTools = tools.builtIn as any;
-      config.configurable.nonBuiltInTools = tools.nonBuiltIn as any;
-      (config.configurable as any).builtInToolsets = tools.builtInToolsets;
-      (config.configurable as any).nonBuiltInToolsets = tools.nonBuiltInToolsets;
+    try {
+      if (toolsets?.length > 0) {
+        const tools = await this.toolService.instantiateToolsets(user, toolsets, this.skillEngine, {
+          context,
+        });
+        cleanupResources = tools.cleanup;
 
-      // Calculate PTC status based on user and toolsets (highest priority)
-      const ptcConfig = getPtcConfig(this.config);
-      const toolsetKeys = toolsets.map((t) => t?.toolset?.key ?? t?.id ?? '');
-      let ptcEnabled = isPtcEnabledForToolsets(user, toolsetKeys, ptcConfig);
+        // Inject categorized tools and toolsets into config
+        config.configurable.selectedTools = tools.all as any;
+        config.configurable.builtInTools = tools.builtIn as any;
+        config.configurable.nonBuiltInTools = tools.nonBuiltIn as any;
+        (config.configurable as any).builtInToolsets = tools.builtInToolsets;
+        (config.configurable as any).nonBuiltInToolsets = tools.nonBuiltInToolsets;
 
-      // Debug mode: title-based filtering, applied only when base check already permits PTC.
-      // opt-in  → enable only if title contains "useptc"
-      // opt-out → disable only if title contains "nonptc"
-      if (ptcEnabled && ptcConfig.debugMode !== null) {
-        const title = data.title?.toLowerCase() ?? '';
-        if (ptcConfig.debugMode === PtcDebugMode.OPT_IN) {
-          ptcEnabled = title.includes('useptc');
-        } else if (ptcConfig.debugMode === PtcDebugMode.OPT_OUT) {
-          ptcEnabled = !title.includes('nonptc');
+        // Calculate PTC status based on user and toolsets (highest priority)
+        const ptcConfig = getPtcConfig(this.config);
+        const toolsetKeys = toolsets.map((t) => t?.toolset?.key ?? t?.id ?? '');
+        let ptcEnabled = isPtcEnabledForToolsets(user, toolsetKeys, ptcConfig);
+
+        // Debug mode: title-based filtering, applied only when base check already permits PTC.
+        // opt-in  → enable only if title contains "useptc"
+        // opt-out → disable only if title contains "nonptc"
+        if (ptcEnabled && ptcConfig.debugMode !== null) {
+          const title = data.title?.toLowerCase() ?? '';
+          if (ptcConfig.debugMode === PtcDebugMode.OPT_IN) {
+            ptcEnabled = title.includes('useptc');
+          } else if (ptcConfig.debugMode === PtcDebugMode.OPT_OUT) {
+            ptcEnabled = !title.includes('nonptc');
+          }
+        }
+
+        config.configurable.ptcEnabled = ptcEnabled;
+        config.configurable.ptcSequential = ptcConfig.sequential;
+
+        if (ptcEnabled && tools.nonBuiltInToolsets.length > 0) {
+          const ptcContext = await this.ptcSdkService.buildPtcContext(tools.nonBuiltInToolsets);
+          config.configurable.ptcContext = ptcContext;
         }
       }
 
-      config.configurable.ptcEnabled = ptcEnabled;
-      config.configurable.ptcSequential = ptcConfig.sequential;
-
-      if (ptcEnabled && tools.nonBuiltInToolsets.length > 0) {
-        const ptcContext = await this.ptcSdkService.buildPtcContext(tools.nonBuiltInToolsets);
-        config.configurable.ptcContext = ptcContext;
+      // For copilot_agent mode, include all tools (authorized and unauthorized)
+      // This allows Copilot to generate workflows with tools that require authorization
+      if (data.mode === 'copilot_agent') {
+        config.configurable.installedToolsets = await this.toolService.listAllToolsForCopilot(user);
+      } else {
+        // For other modes, only include authorized/installed tools
+        config.configurable.installedToolsets = await this.toolService.listTools(user, {
+          enabled: true,
+        });
       }
+
+      config.configurable.webSearchEnabled = this.config.get<boolean>('tools.webSearchEnabled');
+
+      if (eventListener) {
+        const emitter = new EventEmitter<SkillEventMap>();
+
+        emitter.on('start', eventListener);
+        emitter.on('end', eventListener);
+        emitter.on('log', eventListener);
+        emitter.on('error', eventListener);
+        emitter.on('create_node', eventListener);
+        emitter.on('artifact', eventListener);
+        emitter.on('structured_data', eventListener);
+
+        config.configurable.emitter = emitter;
+      }
+
+      return { config, cleanupResources };
+    } catch (error) {
+      // If config build fails after MCP/tools were opened, release them immediately
+      if (cleanupResources) {
+        await cleanupResources().catch((cleanupError) => {
+          this.logger.error(
+            `Failed to cleanup resources after buildInvokeConfig error: ${(cleanupError as Error)?.message}`,
+          );
+        });
+      }
+      throw error;
     }
-
-    // For copilot_agent mode, include all tools (authorized and unauthorized)
-    // This allows Copilot to generate workflows with tools that require authorization
-    if (data.mode === 'copilot_agent') {
-      config.configurable.installedToolsets = await this.toolService.listAllToolsForCopilot(user);
-    } else {
-      // For other modes, only include authorized/installed tools
-      config.configurable.installedToolsets = await this.toolService.listTools(user, {
-        enabled: true,
-      });
-    }
-
-    config.configurable.webSearchEnabled = this.config.get<boolean>('tools.webSearchEnabled');
-
-    if (eventListener) {
-      const emitter = new EventEmitter<SkillEventMap>();
-
-      emitter.on('start', eventListener);
-      emitter.on('end', eventListener);
-      emitter.on('log', eventListener);
-      emitter.on('error', eventListener);
-      emitter.on('create_node', eventListener);
-      emitter.on('artifact', eventListener);
-      emitter.on('structured_data', eventListener);
-
-      config.configurable.emitter = emitter;
-    }
-
-    return config;
   }
 
   private categorizeError(err: Error): {
@@ -838,22 +856,13 @@ export class SkillInvokerService {
       }
     };
 
-    const resultAggregator = new ResultAggregator(this.stepService, resultId, version);
-    const messageAggregator = new MessageAggregator(resultId, version, this.prisma);
-
-    // Initialize structuredData with original query if available
-    const originalQuery = data.input?.originalQuery;
-    if (originalQuery) {
-      resultAggregator.addSkillEvent({
-        event: 'structured_data',
-        resultId,
-        step: { name: 'start' },
-        structuredData: {
-          query: originalQuery, // Store original query in structuredData
-          processedQuery: data.input?.query, // Store processed query for reference
-        },
-      });
-    }
+    // Resource handles — declared before the protected region so finally can always release them
+    let cleanupResources: (() => Promise<void>) | undefined;
+    let config: SkillRunnableConfig | undefined;
+    let resultAggregator: ResultAggregator | undefined;
+    let messageAggregator: MessageAggregator | undefined;
+    let ptcPollerManager: PtcPollerManager | undefined;
+    let runMeta: SkillRunnableMeta | null = null;
 
     // NOTE: Artifacts include both code artifacts and documents
     type ArtifactOutput = Artifact & {
@@ -862,57 +871,6 @@ export class SkillInvokerService {
       connection?: DirectConnection & { document: Y.Doc };
     };
     const artifactMap: Record<string, ArtifactOutput> = {};
-
-    const config = await this.buildInvokeConfig(user, {
-      ...data,
-      eventListener: async (data: SkillEvent) => {
-        if (abortController.signal.aborted) {
-          this.logger.warn(`skill invocation aborted, ignore event: ${JSON.stringify(data)}`);
-          return;
-        }
-
-        // Record output event for simple timeout tracking
-        lastOutputTime = Date.now();
-        hasAnyOutput = true;
-
-        if (res) {
-          writeSSEResponse(res, { ...data, resultId, version });
-        }
-
-        const { event, structuredData, artifact, log } = data;
-        switch (event) {
-          case 'log':
-            if (log) {
-              resultAggregator.addSkillEvent(data);
-            }
-            return;
-          case 'structured_data':
-            if (structuredData) {
-              resultAggregator.addSkillEvent(data);
-            }
-            return;
-          case 'artifact':
-            this.logger.info(`artifact event received: ${JSON.stringify(artifact)}`);
-            return;
-          case 'error':
-            result.errors.push(data.content);
-            return;
-        }
-      },
-    });
-
-    const skill = this.skillInventory.find((s) => s.name === data.skillName);
-
-    let runMeta: SkillRunnableMeta | null = null;
-    const basicUsageData = {
-      uid: user.uid,
-      resultId,
-      actionMeta,
-    };
-
-    if (res) {
-      writeSSEResponse(res, { event: 'start', resultId, version });
-    }
 
     // Consolidated cleanup function to handle ALL timeout intervals and resources
     let cleanupExecuted = false;
@@ -934,48 +892,116 @@ export class SkillInvokerService {
     // Register cleanup on abort signal
     abortController.signal.addEventListener('abort', performCleanup);
 
-    // Start the timeout check when we begin streaming (only if timeout is enabled)
-    if (streamIdleTimeout > 0) {
-      startTimeoutCheck();
-    }
-
-    // Create Langfuse callback handler if baseUrl is configured
-    // New @langfuse/langchain v4 API: simpler initialization, trace ID via runId parameter
-    const callbacks = [];
-    const langfuseBaseUrl = this.config.get<string>('langfuse.baseUrl');
-    if (langfuseBaseUrl) {
-      try {
-        const handler = this.createLangfuseHandler({
-          sessionId: data.target?.entityId,
-          userId: user.uid,
-          skillName: data.skillName,
-          mode: data.mode,
-        });
-        callbacks.push(handler);
-      } catch (err) {
-        this.logger.warn(`Failed to create Langfuse callback handler: ${err.message}`);
-      }
-    }
-
-    // Track latest tool call metadata for error handling
-    let _lastStepName: string | undefined;
-    let _lastToolCallMeta: ToolCallMeta | undefined;
-
-    // PTC polling manager for execute_code tools
-    // Declared outside try block so finally can clean up even if early error occurs
-    const ptcPollerManager = new PtcPollerManager(
-      {
-        res,
-        resultId,
-        version,
-        messageAggregator,
-        getRunMeta: () => runMeta,
-      },
-      this.toolCallService,
-      this.logger,
-    );
-
     try {
+      resultAggregator = new ResultAggregator(this.stepService, resultId, version);
+      messageAggregator = new MessageAggregator(resultId, version, this.prisma);
+
+      // Initialize structuredData with original query if available
+      const originalQuery = data.input?.originalQuery;
+      if (originalQuery) {
+        resultAggregator.addSkillEvent({
+          event: 'structured_data',
+          resultId,
+          step: { name: 'start' },
+          structuredData: {
+            query: originalQuery, // Store original query in structuredData
+            processedQuery: data.input?.query, // Store processed query for reference
+          },
+        });
+      }
+
+      const built = await this.buildInvokeConfig(user, {
+        ...data,
+        eventListener: async (data: SkillEvent) => {
+          if (abortController.signal.aborted) {
+            this.logger.warn(`skill invocation aborted, ignore event: ${JSON.stringify(data)}`);
+            return;
+          }
+
+          // Record output event for simple timeout tracking
+          lastOutputTime = Date.now();
+          hasAnyOutput = true;
+
+          if (res) {
+            writeSSEResponse(res, { ...data, resultId, version });
+          }
+
+          const { event, structuredData, artifact, log } = data;
+          switch (event) {
+            case 'log':
+              if (log) {
+                resultAggregator?.addSkillEvent(data);
+              }
+              return;
+            case 'structured_data':
+              if (structuredData) {
+                resultAggregator?.addSkillEvent(data);
+              }
+              return;
+            case 'artifact':
+              this.logger.info(`artifact event received: ${JSON.stringify(artifact)}`);
+              return;
+            case 'error':
+              result.errors.push(data.content);
+              return;
+          }
+        },
+      });
+      config = built.config;
+      cleanupResources = built.cleanupResources;
+
+      const skill = this.skillInventory.find((s) => s.name === data.skillName);
+
+      const basicUsageData = {
+        uid: user.uid,
+        resultId,
+        actionMeta,
+      };
+
+      if (res) {
+        writeSSEResponse(res, { event: 'start', resultId, version });
+      }
+
+      // Start the timeout check when we begin streaming (only if timeout is enabled)
+      if (streamIdleTimeout > 0) {
+        startTimeoutCheck();
+      }
+
+      // Create Langfuse callback handler if baseUrl is configured
+      // New @langfuse/langchain v4 API: simpler initialization, trace ID via runId parameter
+      const callbacks = [];
+      const langfuseBaseUrl = this.config.get<string>('langfuse.baseUrl');
+      if (langfuseBaseUrl) {
+        try {
+          const handler = this.createLangfuseHandler({
+            sessionId: data.target?.entityId,
+            userId: user.uid,
+            skillName: data.skillName,
+            mode: data.mode,
+          });
+          callbacks.push(handler);
+        } catch (err) {
+          this.logger.warn(`Failed to create Langfuse callback handler: ${err.message}`);
+        }
+      }
+
+      // Track latest tool call metadata for error handling
+      let _lastStepName: string | undefined;
+      let _lastToolCallMeta: ToolCallMeta | undefined;
+
+      // PTC polling manager for execute_code tools
+      ptcPollerManager = new PtcPollerManager(
+        {
+          res,
+          resultId,
+          version,
+          messageAggregator,
+          getRunMeta: () => runMeta,
+        },
+        this.toolCallService,
+        this.logger,
+      );
+
       // Check if already aborted before starting execution (handles queued aborts)
       const isAlreadyAborted = await this.actionService.isAbortRequested(resultId, version);
       if (isAlreadyAborted) {
@@ -1659,17 +1685,26 @@ export class SkillInvokerService {
       result.errorType = finalErrorType;
       result.errors.push(finalErrorMessage);
     } finally {
-      // Cleanup all timers and resources to prevent memory leaks
-      // Note: consolidated abort signal listener handles cleanup for early abort scenarios
+      // --- Resource release FIRST (must not be skipped by persistence failures) ---
 
-      // Perform cleanup for normal completion or exception scenarios
-      // (redundant with abort listener but ensures cleanup in all cases)
+      // Close MCP clients / tool resources before any DB/SSE work
+      if (cleanupResources) {
+        try {
+          await cleanupResources();
+        } catch (cleanupError) {
+          this.logger.error(
+            `Failed to cleanup skill resources for ${resultId}: ${(cleanupError as Error)?.message}`,
+          );
+        }
+      }
+
+      // Stop abort/timeout intervals
       if (!cleanupExecuted) {
         performCleanup();
       }
 
-      // Cleanup all PTC pollers
-      ptcPollerManager.cleanup();
+      // Cleanup PTC pollers
+      ptcPollerManager?.cleanup();
 
       // Unregister the abort controller
       this.actionService.unregisterAbortController(resultId);
@@ -1682,136 +1717,203 @@ export class SkillInvokerService {
         artifact.connection?.disconnect();
       }
 
-      // Flush all pending messages to the database
-      await messageAggregator.flush();
+      // Stop MessageAggregator auto-save timer even if flush/persist fails below
+      try {
+        messageAggregator?.dispose();
+      } catch (disposeError) {
+        this.logger.error(
+          `Failed to dispose messageAggregator for ${resultId}: ${(disposeError as Error)?.message}`,
+        );
+      }
 
-      const steps = await resultAggregator.getSteps({ resultId, version });
-      // Get only unpersisted messages (those that failed during auto-save)
-      const messages = messageAggregator.getUnpersistedMessagesAsPrismaInput();
-      const status = result.errors.length > 0 ? 'failed' : 'finish';
+      // Clean up added files map for this result to prevent memory leak
+      for (const key of this.addedFilesMap.keys()) {
+        if (key.startsWith(`${resultId}:`)) {
+          this.addedFilesMap.delete(key);
+        }
+      }
+    }
 
-      this.logger.info(
-        `Persisting ${steps.length} steps and ${messages.length} unpersisted messages for result ${resultId}`,
-      );
+    // --- Required persistence AFTER resource-cleanup finally (no throw/return from finally) ---
+    const status = result.errors.length > 0 ? 'failed' : 'finish';
+    // Use || instead of ?? to ensure errorType is never empty string
+    const errorType = status === 'failed' ? result.errorType || 'systemError' : null;
+    // Successful path must store []; setup-failure message only when status is failed and errors empty
+    const errorsJson =
+      status === 'failed' && result.errors.length === 0
+        ? JSON.stringify(['Skill invocation failed during setup'])
+        : JSON.stringify(result.errors);
 
-      await this.prisma.$transaction([
-        this.prisma.actionStep.createMany({ data: steps }),
-        // Persist remaining unpersisted messages to action_messages table
-        // Use skipDuplicates to handle cases where messages were already auto-saved
-        ...(messages.length > 0
-          ? [this.prisma.actionMessage.createMany({ data: messages, skipDuplicates: true })]
-          : []),
-        ...(result.workflowNodeExecutionId
-          ? [
-              this.prisma.workflowNodeExecution.updateMany({
-                where: { nodeExecutionId: result.workflowNodeExecutionId },
-                data: { status, errorMessage: JSON.stringify(result.errors), endTime: new Date() },
-              }),
-            ]
-          : []),
-        this.prisma.actionResult.updateMany({
-          where: { resultId, version },
-          data: {
-            status,
-            // Use || instead of ?? to ensure errorType is never empty string
-            // If status is failed, use result.errorType (which should always be set now), fallback to 'systemError'
-            errorType: status === 'failed' ? result.errorType || 'systemError' : null,
-            errors: JSON.stringify(result.errors),
-            ptcEnabled: config.configurable.ptcEnabled ?? false,
-          },
-        }),
-      ]);
+    try {
+      if (messageAggregator && resultAggregator && config) {
+        // Flush all pending messages to the database
+        await messageAggregator.flush();
 
-      // Sync workflow node status to canvas after execution completes
-      if (result.workflowNodeExecutionId) {
-        try {
-          const nodeExecution = await this.prisma.workflowNodeExecution.findUnique({
-            where: { nodeExecutionId: result.workflowNodeExecutionId },
-            select: { canvasId: true, nodeId: true },
-          });
+        const steps = await resultAggregator.getSteps({ resultId, version });
+        // Get only unpersisted messages (those that failed during auto-save)
+        const messages = messageAggregator.getUnpersistedMessagesAsPrismaInput();
 
-          if (nodeExecution?.canvasId && nodeExecution?.nodeId) {
-            const nodeDiff: NodeDiff = {
-              type: 'update',
-              id: nodeExecution.nodeId,
-              to: {
-                data: {
-                  metadata: {
+        this.logger.info(
+          `Persisting ${steps.length} steps and ${messages.length} unpersisted messages for result ${resultId}`,
+        );
+
+        await this.prisma.$transaction([
+          this.prisma.actionStep.createMany({ data: steps }),
+          // Persist remaining unpersisted messages to action_messages table
+          // Use skipDuplicates to handle cases where messages were already auto-saved
+          ...(messages.length > 0
+            ? [this.prisma.actionMessage.createMany({ data: messages, skipDuplicates: true })]
+            : []),
+          ...(result.workflowNodeExecutionId
+            ? [
+                this.prisma.workflowNodeExecution.updateMany({
+                  where: { nodeExecutionId: result.workflowNodeExecutionId },
+                  data: {
                     status,
+                    errorMessage: errorsJson,
+                    endTime: new Date(),
                   },
+                }),
+              ]
+            : []),
+          this.prisma.actionResult.updateMany({
+            where: { resultId, version },
+            data: {
+              status,
+              errorType,
+              errors: errorsJson,
+              ptcEnabled: config.configurable.ptcEnabled ?? false,
+            },
+          }),
+        ]);
+      } else {
+        // Setup failed before config/aggregators were ready — still mark action terminal
+        // so BullMQ success does not leave the row stuck in "executing".
+        this.logger.warn(
+          `Persisting minimal failed status for ${resultId} (setup incomplete: aggregator/config missing)`,
+        );
+        await this.prisma.$transaction([
+          this.prisma.actionResult.updateMany({
+            where: { resultId, version, status: { notIn: ['finish', 'failed'] } },
+            data: {
+              status: 'failed',
+              errorType: errorType || 'systemError',
+              errors: errorsJson,
+            },
+          }),
+          ...(result.workflowNodeExecutionId
+            ? [
+                this.prisma.workflowNodeExecution.updateMany({
+                  where: { nodeExecutionId: result.workflowNodeExecutionId },
+                  data: {
+                    status: 'failed',
+                    errorMessage: errorsJson,
+                    endTime: new Date(),
+                  },
+                }),
+              ]
+            : []),
+        ]);
+      }
+    } catch (persistError) {
+      this.logger.error(
+        `Failed required post-invoke persistence for ${resultId}: ${(persistError as Error)?.stack ?? persistError}`,
+      );
+      // Last-ditch terminal status so the action is not left executing
+      try {
+        await this.prisma.actionResult.updateMany({
+          where: { resultId, version, status: { notIn: ['finish', 'failed'] } },
+          data: {
+            status: 'failed',
+            errorType: 'systemError',
+            errors: JSON.stringify([
+              (persistError as Error)?.message || 'Failed to persist skill result',
+            ]),
+          },
+        });
+      } catch (fallbackError) {
+        this.logger.error(
+          `Failed fallback status update for ${resultId}: ${(fallbackError as Error)?.message}`,
+        );
+      }
+      try {
+        writeSSEResponse(res, { event: 'end', resultId, version });
+      } catch {
+        // ignore SSE failures during cleanup
+      }
+      // Propagate so queue workers can fail the job (streamInvokeSkill rethrows when !res)
+      throw persistError;
+    }
+
+    // Best-effort side effects — failures here must not undo required status persistence
+    try {
+      if (result.workflowNodeExecutionId) {
+        const nodeExecution = await this.prisma.workflowNodeExecution.findUnique({
+          where: { nodeExecutionId: result.workflowNodeExecutionId },
+          select: { canvasId: true, nodeId: true },
+        });
+
+        if (nodeExecution?.canvasId && nodeExecution?.nodeId) {
+          const nodeDiff: NodeDiff = {
+            type: 'update',
+            id: nodeExecution.nodeId,
+            to: {
+              data: {
+                metadata: {
+                  status,
                 },
               },
-            };
+            },
+          };
 
-            await this.canvasSyncService.syncState(user, {
-              canvasId: nodeExecution.canvasId,
-              transactions: [
-                {
-                  txId: genTransactionId(),
-                  createdAt: Date.now(),
-                  syncedAt: Date.now(),
-                  source: { type: 'system' },
-                  nodeDiffs: [nodeDiff],
-                  edgeDiffs: [],
-                },
-              ],
-            });
+          await this.canvasSyncService.syncState(user, {
+            canvasId: nodeExecution.canvasId,
+            transactions: [
+              {
+                txId: genTransactionId(),
+                createdAt: Date.now(),
+                syncedAt: Date.now(),
+                source: { type: 'system' },
+                nodeDiffs: [nodeDiff],
+                edgeDiffs: [],
+              },
+            ],
+          });
 
-            this.logger.debug(
-              `Synced workflow node ${nodeExecution.nodeId} status to canvas ${nodeExecution.canvasId}`,
-            );
-          }
-        } catch (syncError) {
-          // Log but don't fail the skill invocation if canvas sync fails
-          this.logger.error(
-            `Failed to sync workflow node status to canvas: ${(syncError as Error).message}`,
+          this.logger.debug(
+            `Synced workflow node ${nodeExecution.nodeId} status to canvas ${nodeExecution.canvasId}`,
           );
         }
       }
-
-      writeSSEResponse(res, { event: 'end', resultId, version });
 
       // Check if we need to auto-name the target canvas
       if (data.target?.entityType === 'canvas' && !result.errors.length) {
         const canvas = await this.prisma.canvas.findFirst({
           where: { canvasId: data.target.entityId, uid: user.uid },
         });
-        if (canvas && !canvas.title) {
-          if (this.autoNameCanvasQueue) {
-            await this.autoNameCanvasQueue.add('autoNameCanvas', {
-              uid: user.uid,
-              canvasId: canvas.canvasId,
-            });
-          }
-          // In desktop mode, we could handle auto-naming differently if needed
-        }
-      }
-
-      if (tier) {
-        if (this.requestUsageQueue) {
-          await this.requestUsageQueue.add('syncRequestUsage', {
+        if (canvas && !canvas.title && this.autoNameCanvasQueue) {
+          await this.autoNameCanvasQueue.add('autoNameCanvas', {
             uid: user.uid,
-            tier,
-            timestamp: new Date(),
+            canvasId: canvas.canvasId,
           });
         }
-        // In desktop mode, we could handle usage tracking differently if needed
       }
 
-      await resultAggregator.clearCache();
-
-      // Clean up added files map for this result to prevent memory leak
-      // Remove all entries for this resultId
-      for (const key of this.addedFilesMap.keys()) {
-        if (key.startsWith(`${resultId}:`)) {
-          this.addedFilesMap.delete(key);
-        }
+      if (tier && this.requestUsageQueue) {
+        await this.requestUsageQueue.add('syncRequestUsage', {
+          uid: user.uid,
+          tier,
+          timestamp: new Date(),
+        });
       }
-      // Process credit billing for all steps after skill completion
+
+      await resultAggregator?.clearCache();
+
       // Bill credits for successful completions and user aborts (partial usage should be charged)
-      const shouldBillCredits = !result.errors.length || result.errorType === 'userAbort';
+      const shouldBillCredits =
+        !!resultAggregator && (!result.errors.length || result.errorType === 'userAbort');
 
-      if (shouldBillCredits) {
+      if (shouldBillCredits && resultAggregator) {
         await this.processCreditUsageReport(
           user,
           resultId,
@@ -1820,9 +1922,18 @@ export class SkillInvokerService {
           data.providerItem,
         );
       }
+    } catch (sideEffectError) {
+      this.logger.error(
+        `Best-effort post-invoke side effects failed for ${resultId}: ${(sideEffectError as Error)?.stack ?? sideEffectError}`,
+      );
+    }
 
-      // Dispose message aggregator to clean up resources (stop auto-save timer)
-      messageAggregator.dispose();
+    try {
+      writeSSEResponse(res, { event: 'end', resultId, version });
+    } catch (sseError) {
+      this.logger.warn(
+        `Failed to write SSE end for ${resultId}: ${(sseError as Error)?.message ?? sseError}`,
+      );
     }
   }
 
@@ -2198,10 +2309,12 @@ export class SkillInvokerService {
 
     const { resultId, version } = data.result;
 
-    const defaultModel = await this.providerService.findDefaultProviderItem(user, 'chat');
-    this.skillEngine.setOptions({ defaultModel: defaultModel?.name });
-
     try {
+      // Keep provider/default-model setup inside try so failures still terminalize action/workflow
+      // and always hit finally (res.end) / queue rethrow.
+      const defaultModel = await this.providerService.findDefaultProviderItem(user, 'chat');
+      this.skillEngine.setOptions({ defaultModel: defaultModel?.name });
+
       await this._invokeSkill(user, data, res);
     } catch (err) {
       if (res) {
@@ -2215,14 +2328,37 @@ export class SkillInvokerService {
       }
       this.logger.error(`invoke skill error: ${err.stack}`);
 
-      await this.prisma.actionResult.updateMany({
-        where: { resultId, version, status: { notIn: ['finish', 'failed'] } },
-        data: {
-          status: 'failed',
-          errorType: 'systemError',
-          errors: JSON.stringify([err.message]),
-        },
-      });
+      try {
+        await this.prisma.actionResult.updateMany({
+          where: { resultId, version, status: { notIn: ['finish', 'failed'] } },
+          data: {
+            status: 'failed',
+            errorType: 'systemError',
+            errors: JSON.stringify([err.message]),
+          },
+        });
+        // Also terminalize workflow node if present (outer fallback for pre-try setup failures)
+        if (data.result?.workflowNodeExecutionId) {
+          await this.prisma.workflowNodeExecution.updateMany({
+            where: { nodeExecutionId: data.result.workflowNodeExecutionId },
+            data: {
+              status: 'failed',
+              errorMessage: JSON.stringify([err.message]),
+              endTime: new Date(),
+            },
+          });
+        }
+      } catch (statusError) {
+        this.logger.error(
+          `Failed to mark action failed after invoke error: ${(statusError as Error)?.message}`,
+        );
+      }
+
+      // Queue path (!res): rethrow so BullMQ marks the job failed and can retry.
+      // HTTP SSE path: status already written; do not rethrow (client already got error event).
+      if (!res) {
+        throw err;
+      }
     } finally {
       if (res) {
         res.end('');
