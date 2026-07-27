@@ -123,17 +123,10 @@ export class AutoModelTrialService {
    * @param ttlSeconds - TTL in seconds
    */
   private incrementCounterAsync(cacheKey: string, ttlSeconds: number): void {
-    // Fire and forget - don't await
-    this.redis
-      .incr(cacheKey)
-      .then(async (newValue) => {
-        // Refresh TTL after increment
-        await this.redis.expire(cacheKey, ttlSeconds);
-        return newValue;
-      })
-      .catch((error) => {
-        this.logger.warn(`Failed to increment trial counter: ${cacheKey}`, error);
-      });
+    // Fire and forget - don't await. INCR+EXPIRE is atomic via RedisService.incr(ttl).
+    this.redis.incr(cacheKey, ttlSeconds).catch((error) => {
+      this.logger.warn(`Failed to increment trial counter: ${cacheKey}`, error);
+    });
   }
 
   /**
