@@ -6,9 +6,9 @@ import { ChatOllama } from '@langchain/ollama';
 import { ChatFireworks } from '@langchain/community/chat_models/fireworks';
 import { BaseProvider } from '../types';
 import { AzureChatOpenAI, AzureOpenAIInput, OpenAIBaseInput } from '@langchain/openai';
-import { ChatBedrockConverse } from '@langchain/aws';
 import { wrapChatModelWithMonitoring } from '../monitoring/langfuse-wrapper';
 import { ProviderMisconfigurationError } from '@refly/errors';
+import { SanitizingChatBedrockConverse } from './bedrock';
 
 interface BedrockApiKeyConfig {
   accessKeyId: string;
@@ -149,7 +149,7 @@ export const getChatModel = (
           config?.capabilities?.supportToolChoice,
         );
 
-        model = new ChatBedrockConverse({
+        model = new SanitizingChatBedrockConverse({
           model: config.modelId,
           region: selectedRegion,
           credentials: apiKeyConfig,
@@ -197,3 +197,8 @@ export const getChatModel = (
 
 export { BaseChatModel };
 export { isGeminiModel } from './vertex';
+export { SanitizingChatBedrockConverse } from './bedrock';
+export {
+  sanitizeBedrockReplayMessages,
+  sanitizeReasoningContentBlocks,
+} from './bedrock-message-sanitize';
