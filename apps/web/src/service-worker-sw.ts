@@ -123,10 +123,7 @@ const isCacheableHtmlResponse = (response: Response): boolean => {
     return false;
   }
   const contentType = getContentType(response);
-  // Allow empty content-type (some edges omit it) but never non-HTML types
-  if (!contentType) {
-    return true;
-  }
+  // Require explicit HTML MIME — never cache unknown/empty types as documents
   return isHtmlContentType(contentType);
 };
 
@@ -225,34 +222,28 @@ self.addEventListener('install', (event) => {
         `[SW] Precaching ${criticalUrls.length} critical resources (filtered from ${self.__WB_MANIFEST.length})`,
       );
 
-      try {
-        // Validated fetch+put (never cache.addAll — SPA HTML 200 would poison the cache)
-        const results = await Promise.allSettled(
-          criticalUrls.map(async (url) => {
-            const request = new Request(url);
-            const response = await fetch(request, { cache: 'no-cache' });
-            const ok = await putStaticAssetIfValid(cache, request, response);
-            if (!ok) {
-              throw new Error(
-                `Invalid critical asset: ${url} status=${response.status} ct=${getContentType(response)}`,
-              );
-            }
-          }),
-        );
-        const failed = results.filter((r) => r.status === 'rejected');
-        if (failed.length > 0) {
-          console.error(
-            `[SW] Critical precache failed for ${failed.length}/${criticalUrls.length}`,
-          );
-        } else {
-          console.log('[SW] Critical resources precached');
-        }
-      } catch (error) {
-        console.error('[SW] Precache failed:', error);
-      } finally {
-        // Always activate so MIME guards take effect even if some critical assets failed
-        await self.skipWaiting();
+      // Validated fetch+put (never cache.addAll — SPA HTML 200 would poison the cache).
+      // Fail the install if any critical asset is missing/invalid so we do not
+      // skipWaiting + delete v1 while leaving clients without a usable v2 cache.
+      if (criticalUrls.length === 0) {
+        throw new Error('[SW] No critical URLs found in __WB_MANIFEST');
       }
+
+      await Promise.all(
+        criticalUrls.map(async (url) => {
+          const request = new Request(url);
+          const response = await fetch(request, { cache: 'no-cache' });
+          const ok = await putStaticAssetIfValid(cache, request, response);
+          if (!ok) {
+            throw new Error(
+              `Invalid critical asset: ${url} status=${response.status} ct=${getContentType(response)}`,
+            );
+          }
+        }),
+      );
+
+      console.log('[SW] Critical resources precached');
+      await self.skipWaiting();
     })(),
   );
 });
@@ -366,10 +357,14 @@ registerRoute(
                   clientId,
                 );
 
-                // 1. Clear old HTML shell caches only (never touch /static/* assets)
+                // 1. Clear old same-origin HTML shell caches only (never touch /static/*)
                 const allCachedRequests = await cache.keys();
                 const htmlCachesToDelete = allCachedRequests.filter((req) => {
-                  const path = new URL(req.url).pathname;
+                  const cachedUrl = new URL(req.url);
+                  if (cachedUrl.origin !== self.location.origin) {
+                    return false;
+                  }
+                  const path = cachedUrl.pathname;
                   return isHtmlDocumentPath(path) && path !== '/' && !isSsrPath(path);
                 });
 
