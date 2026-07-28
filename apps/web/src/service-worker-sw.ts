@@ -1,13 +1,13 @@
 /// <reference lib="webworker" />
 
 /**
- * Custom Service Worker with Background Precaching - Simplified Single Cache
+ * Custom Service Worker with Background Precaching
  *
- * Key improvements:
- * 1. Single cache bucket (app-cache-v1) for all resources
- * 2. No expiration/maxEntries (files are hashed, no need for cleanup)
- * 3. Explicit cache checking before precaching (avoid duplicate downloads)
- * 4. Singleton pattern for background precacher (avoid duplicate instances)
+ * Cache schema v2 (post HTML-under-JS poison incident):
+ * 1. CacheFirst only for hashed /static JS/CSS (not all same-origin)
+ * 2. MIME validation on every cache write/read path
+ * 3. Known legacy buckets deleted on activate (not every origin cache)
+ * 4. Background precache + install use the same validation
  */
 
 import { registerRoute } from 'workbox-routing';
@@ -38,6 +38,13 @@ type CacheWillUpdatePlugin = {
   }) => Promise<Response | null | undefined>;
 };
 
+type CachedResponseWillBeUsedPlugin = {
+  cachedResponseWillBeUsed?: (args: {
+    request: Request;
+    cachedResponse?: Response;
+  }) => Promise<Response | undefined | null>;
+};
+
 // TypeScript declarations for Service Worker context
 declare const self: ServiceWorkerGlobalScope;
 
@@ -45,13 +52,98 @@ declare const self: ServiceWorkerGlobalScope;
 // Configuration
 // ============================================================================
 
-const CACHE_NAME = 'app-cache-v1';
+/** Cache schema version — bump only when cache semantics change (not every deploy). */
+const CACHE_NAME = 'app-cache-v2';
+
+/** Previous Refly SW cache buckets to drop on activate. */
+const LEGACY_CACHE_NAMES = ['app-cache-v1'] as const;
 
 const getClientId = (event: ExtendableEvent): string | null => {
   if ('clientId' in event) {
     return (event as FetchEvent).clientId || null;
   }
   return null;
+};
+
+const getContentType = (response: Response): string => {
+  return (response.headers.get('content-type') || '').toLowerCase().split(';')[0].trim();
+};
+
+const isJavaScriptContentType = (contentType: string): boolean => {
+  return (
+    contentType === 'application/javascript' ||
+    contentType === 'text/javascript' ||
+    contentType === 'application/x-javascript'
+  );
+};
+
+const isCssContentType = (contentType: string): boolean => {
+  return contentType === 'text/css';
+};
+
+const isHtmlContentType = (contentType: string): boolean => {
+  return contentType === 'text/html' || contentType === 'application/xhtml+xml';
+};
+
+/** Hashed static JS/CSS under /static/ — safe for long-lived CacheFirst. */
+const isStaticAssetPath = (pathname: string): boolean => {
+  if (!pathname.startsWith('/static/')) {
+    return false;
+  }
+  return pathname.endsWith('.js') || pathname.endsWith('.css');
+};
+
+const isCacheableStaticResponse = (request: Request, response: Response): boolean => {
+  if (!response || response.status !== 200) {
+    return false;
+  }
+
+  const pathname = new URL(request.url).pathname;
+  if (!isStaticAssetPath(pathname)) {
+    return false;
+  }
+
+  const contentType = getContentType(response);
+  // SPA fallbacks are 200 text/html — never cache those as assets
+  if (!contentType || isHtmlContentType(contentType)) {
+    return false;
+  }
+
+  if (pathname.endsWith('.js')) {
+    return isJavaScriptContentType(contentType);
+  }
+  if (pathname.endsWith('.css')) {
+    return isCssContentType(contentType);
+  }
+  return false;
+};
+
+const isCacheableHtmlResponse = (response: Response): boolean => {
+  if (!response || response.status !== 200) {
+    return false;
+  }
+  const contentType = getContentType(response);
+  // Require explicit HTML MIME — never cache unknown/empty types as documents
+  return isHtmlContentType(contentType);
+};
+
+/** Put only if response MIME matches the static asset URL. */
+const putStaticAssetIfValid = async (
+  cache: Cache,
+  request: Request,
+  response: Response,
+): Promise<boolean> => {
+  if (!isCacheableStaticResponse(request, response)) {
+    console.warn(
+      '[SW] Skip cache put (invalid static response):',
+      request.url,
+      response.status,
+      getContentType(response),
+    );
+    return false;
+  }
+  await cache.put(request, response.clone());
+  return true;
 };
 
 const normalizeHtmlCacheKey = (request: Request): string => {
@@ -81,6 +173,21 @@ const isSsrPath = (path: string): boolean => {
     path.startsWith('/workflow-marketplace') ||
     path.startsWith('/workflow-template')
   );
+};
+
+const isHtmlDocumentPath = (pathname: string): boolean => {
+  if (
+    pathname.startsWith('/static/') ||
+    pathname.startsWith('/api/') ||
+    pathname.startsWith('/v1/')
+  ) {
+    return false;
+  }
+  if (pathname.includes('.')) {
+    // Likely a file path (e.g. /logo.svg, /config.js) — not app HTML shell
+    return false;
+  }
+  return true;
 };
 
 // ============================================================================
@@ -115,35 +222,140 @@ self.addEventListener('install', (event) => {
         `[SW] Precaching ${criticalUrls.length} critical resources (filtered from ${self.__WB_MANIFEST.length})`,
       );
 
-      try {
-        await cache.addAll(criticalUrls);
-        console.log('[SW] Critical resources precached');
-      } catch (error) {
-        console.error('[SW] Precache failed:', error);
-      } finally {
-        await self.skipWaiting();
+      // Validated fetch+put (never cache.addAll — SPA HTML 200 would poison the cache).
+      // Fail the install if any critical asset is missing/invalid so we do not
+      // skipWaiting + delete v1 while leaving clients without a usable v2 cache.
+      if (criticalUrls.length === 0) {
+        throw new Error('[SW] No critical URLs found in __WB_MANIFEST');
       }
+
+      await Promise.all(
+        criticalUrls.map(async (url) => {
+          const request = new Request(url);
+          const response = await fetch(request, { cache: 'no-cache' });
+          const ok = await putStaticAssetIfValid(cache, request, response);
+          if (!ok) {
+            throw new Error(
+              `Invalid critical asset: ${url} status=${response.status} ct=${getContentType(response)}`,
+            );
+          }
+        }),
+      );
+
+      console.log('[SW] Critical resources precached');
+      await self.skipWaiting();
     })(),
   );
 });
+
+/** Entries worth carrying from v1 → v2 for open tabs / offline shells. */
+const isMigratableLegacyEntry = (request: Request, response: Response, url: URL): boolean => {
+  if (url.origin !== self.location.origin) {
+    return false;
+  }
+  // Hashed static JS/CSS (open-tab lazy chunks)
+  if (isStaticAssetPath(url.pathname)) {
+    return isCacheableStaticResponse(request, response);
+  }
+  // App HTML shells for offline refresh (skip home/SSR — those are NetworkOnly)
+  if (isHtmlDocumentPath(url.pathname) && url.pathname !== '/' && !isSsrPath(url.pathname)) {
+    return isCacheableHtmlResponse(response);
+  }
+  return false;
+};
+
+/**
+ * Best-effort copy of migratable entries from a legacy bucket into v2.
+ * Never throws: quota / put failures must not block activate (delete + claim).
+ * Deletes each source entry after put to avoid doubling storage use.
+ */
+const migrateValidEntriesFromLegacy = async (
+  legacyName: string,
+  target: Cache,
+): Promise<number> => {
+  let legacy: Cache;
+  try {
+    legacy = await caches.open(legacyName);
+  } catch {
+    return 0;
+  }
+
+  let keys: readonly Request[];
+  try {
+    keys = await legacy.keys();
+  } catch {
+    return 0;
+  }
+
+  let migrated = 0;
+
+  // Sequential: release source entries as we go so quota stays roughly flat.
+  for (const request of keys) {
+    try {
+      let url: URL;
+      try {
+        url = new URL(request.url);
+      } catch {
+        continue;
+      }
+
+      const response = await legacy.match(request);
+      if (!response || !isMigratableLegacyEntry(request, response, url)) {
+        continue;
+      }
+
+      const existing = await target.match(request);
+      if (!existing) {
+        // response body is only used here — no clone needed
+        await target.put(request, response);
+        migrated += 1;
+      }
+
+      // Free space whether we copied or v2 already had it
+      await legacy.delete(request);
+    } catch (error) {
+      // QuotaExceededError or transient cache errors — stop migrating, still activate
+      console.warn('[SW] Legacy migrate stopped early:', legacyName, error);
+      break;
+    }
+  }
+
+  return migrated;
+};
 
 self.addEventListener('activate', (event) => {
   console.log('[SW] Activate event');
 
   event.waitUntil(
     (async () => {
-      // Clean up old caches
-      const cacheNames = await caches.keys();
-      await Promise.all(
-        cacheNames
-          .filter((name) => name !== CACHE_NAME)
-          .map((name) => {
-            console.log(`[SW] Deleting old cache: ${name}`);
-            return caches.delete(name);
-          }),
-      );
+      try {
+        const cache = await caches.open(CACHE_NAME);
 
-      // Take control immediately
+        // Preserve open-tab lazy chunks + offline HTML shells from v1 → v2, then drop v1.
+        // Migration is best-effort; activate must still complete on quota pressure.
+        for (const name of LEGACY_CACHE_NAMES) {
+          try {
+            const migrated = await migrateValidEntriesFromLegacy(name, cache);
+            if (migrated > 0) {
+              console.log(`[SW] Migrated ${migrated} cache entries from ${name}`);
+            }
+          } catch (error) {
+            console.warn(`[SW] Legacy migrate failed for ${name}:`, error);
+          }
+          try {
+            const deleted = await caches.delete(name);
+            if (deleted) {
+              console.log(`[SW] Deleted legacy cache: ${name}`);
+            }
+          } catch (error) {
+            console.warn(`[SW] Legacy delete failed for ${name}:`, error);
+          }
+        }
+      } catch (error) {
+        console.error('[SW] Activate cache setup failed:', error);
+      }
+
+      // Always claim so MIME guards take effect even if migration was partial
       await self.clients.claim();
 
       console.log('[SW] Activated, waiting for page load before starting precache');
@@ -168,7 +380,10 @@ registerRoute(
 );
 
 // === Strategy 2: API requests - NetworkOnly (never cache API responses) ===
-registerRoute(({ url }) => url.pathname.startsWith('/api/'), new NetworkOnly());
+registerRoute(
+  ({ url }) => url.pathname.startsWith('/api/') || url.pathname.startsWith('/v1/'),
+  new NetworkOnly(),
+);
 
 // === Strategy 3: HTML (non-home) - StaleWhileRevalidate with version check ===
 registerRoute(
@@ -186,8 +401,8 @@ registerRoute(
       } satisfies CacheKeyPlugin,
       {
         cacheWillUpdate: async ({ request, response, event }) => {
-          // Only cache successful responses
-          if (!response || response.status !== 200) {
+          // Only cache successful HTML document responses
+          if (!isCacheableHtmlResponse(response)) {
             return null;
           }
 
@@ -234,18 +449,15 @@ registerRoute(
                   clientId,
                 );
 
-                // 1. Clear all old HTML caches (except SSR pages)
+                // 1. Clear old same-origin HTML shell caches only (never touch /static/*)
                 const allCachedRequests = await cache.keys();
                 const htmlCachesToDelete = allCachedRequests.filter((req) => {
-                  const url = new URL(req.url);
-                  // Match both:
-                  // - req.destination === 'document' (from fetch events)
-                  // - req.destination === '' (from cache.put with string keys)
-                  return (
-                    (req.destination === 'document' || req.destination === '') &&
-                    url.pathname !== '/' &&
-                    !isSsrPath(url.pathname)
-                  );
+                  const cachedUrl = new URL(req.url);
+                  if (cachedUrl.origin !== self.location.origin) {
+                    return false;
+                  }
+                  const path = cachedUrl.pathname;
+                  return isHtmlDocumentPath(path) && path !== '/' && !isSsrPath(path);
                 });
 
                 console.log(`[SW] Clearing ${htmlCachesToDelete.length} old HTML caches`);
@@ -271,7 +483,7 @@ registerRoute(
                         const routeResponse = await fetch(routeUrl, {
                           cache: 'no-cache',
                         });
-                        if (routeResponse.ok) {
+                        if (isCacheableHtmlResponse(routeResponse)) {
                           await cache.put(routeUrl, routeResponse);
                           console.log('[SW] Precached new HTML:', route);
                         }
@@ -306,26 +518,48 @@ registerRoute(
   }),
 );
 
-// === Strategy 4: All other same-origin resources - CacheFirst ===
+// === Strategy 4: Hashed static JS/CSS only - CacheFirst + MIME guards ===
 registerRoute(
-  ({ url }) => url.origin === self.location.origin,
+  ({ url }) => url.origin === self.location.origin && isStaticAssetPath(url.pathname),
   new CacheFirst({
     cacheName: CACHE_NAME,
     plugins: [
       new CacheableResponsePlugin({
         statuses: [200],
       }),
-      //  Add debug logging to see if cache matching works
+      {
+        cacheWillUpdate: async ({ request, response }) => {
+          if (!response || !isCacheableStaticResponse(request, response)) {
+            return null;
+          }
+          return response;
+        },
+      } satisfies CacheWillUpdatePlugin,
       {
         cachedResponseWillBeUsed: async ({ request, cachedResponse }) => {
-          if (cachedResponse) {
-            console.log('[SW] Cache HIT:', request.url);
-          } else {
+          if (!cachedResponse) {
             console.log('[SW] Cache MISS:', request.url);
+            return undefined;
           }
+          // Heal poisoned entries (e.g. SPA HTML stored under a .js URL)
+          if (!isCacheableStaticResponse(request, cachedResponse)) {
+            console.warn(
+              '[SW] Dropping poisoned cache entry:',
+              request.url,
+              getContentType(cachedResponse),
+            );
+            try {
+              const cache = await caches.open(CACHE_NAME);
+              await cache.delete(request);
+            } catch {
+              // ignore delete failures
+            }
+            return null;
+          }
+          console.log('[SW] Cache HIT:', request.url);
           return cachedResponse;
         },
-      },
+      } satisfies CachedResponseWillBeUsedPlugin,
     ],
     matchOptions: {
       ignoreSearch: false,
@@ -660,25 +894,25 @@ class ServiceWorkerBackgroundPrecache {
           activePrecacheControllers.add(controller);
 
           try {
-            //  Create Request object for consistent cache key
+            // Create Request object for consistent cache key
             const request = new Request(url);
 
-            //  Check if already cached (real-time check)
+            // Skip only if a *valid* static asset is already cached
             const cached = await cache.match(request);
-            if (cached) {
+            if (cached && isCacheableStaticResponse(request, cached)) {
               return;
             }
+            if (cached) {
+              await cache.delete(request);
+            }
 
-            //  Fetch and explicitly cache
+            // Fetch and cache only valid static JS/CSS (reject SPA HTML fallbacks)
             const response = await fetch(request, {
               cache: 'default',
               signal: controller.signal,
             });
 
-            if (response.ok) {
-              // Use Request object as key for consistent matching with Workbox
-              await cache.put(request, response.clone());
-            }
+            await putStaticAssetIfValid(cache, request, response);
           } catch (error) {
             if (error?.name !== 'AbortError') {
               console.warn('[SW] Failed to fetch:', url);
@@ -793,4 +1027,4 @@ self.addEventListener('fetch', (event) => {
   }
 });
 
-console.log('[SW] Service Worker loaded with simplified single-cache architecture');
+console.log('[SW] Service Worker loaded (cache schema v2, static MIME guards)');
