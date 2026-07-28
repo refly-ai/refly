@@ -41,7 +41,7 @@ type CacheWillUpdatePlugin = {
 type CachedResponseWillBeUsedPlugin = {
   cachedResponseWillBeUsed?: (args: {
     request: Request;
-    cachedResponse: Response | undefined;
+    cachedResponse?: Response;
   }) => Promise<Response | undefined | null>;
 };
 
@@ -248,20 +248,65 @@ self.addEventListener('install', (event) => {
   );
 });
 
+/** Copy MIME-valid hashed static assets from a legacy bucket into v2 before delete. */
+const migrateValidStaticFromLegacy = async (legacyName: string, target: Cache): Promise<number> => {
+  let legacy: Cache | undefined;
+  try {
+    legacy = await caches.open(legacyName);
+  } catch {
+    return 0;
+  }
+
+  const keys = await legacy.keys();
+  const results = await Promise.all(
+    keys.map(async (request): Promise<boolean> => {
+      let url: URL;
+      try {
+        url = new URL(request.url);
+      } catch {
+        return false;
+      }
+      if (url.origin !== self.location.origin || !isStaticAssetPath(url.pathname)) {
+        return false;
+      }
+
+      const response = await legacy.match(request);
+      if (!response || !isCacheableStaticResponse(request, response)) {
+        return false;
+      }
+
+      const existing = await target.match(request);
+      if (existing) {
+        return false;
+      }
+
+      await target.put(request, response.clone());
+      return true;
+    }),
+  );
+
+  return results.filter(Boolean).length;
+};
+
 self.addEventListener('activate', (event) => {
   console.log('[SW] Activate event');
 
   event.waitUntil(
     (async () => {
-      // Only drop known legacy Refly buckets — do not wipe unrelated origin caches
-      await Promise.all(
-        LEGACY_CACHE_NAMES.map(async (name) => {
-          const deleted = await caches.delete(name);
-          if (deleted) {
-            console.log(`[SW] Deleted legacy cache: ${name}`);
-          }
-        }),
-      );
+      const cache = await caches.open(CACHE_NAME);
+
+      // Preserve open-tab lazy chunks: migrate valid static from v1 → v2, then drop v1.
+      // Do not migrate HTML shells (stale) or poisoned MIME entries.
+      for (const name of LEGACY_CACHE_NAMES) {
+        const migrated = await migrateValidStaticFromLegacy(name, cache);
+        if (migrated > 0) {
+          console.log(`[SW] Migrated ${migrated} static assets from ${name}`);
+        }
+        const deleted = await caches.delete(name);
+        if (deleted) {
+          console.log(`[SW] Deleted legacy cache: ${name}`);
+        }
+      }
 
       // Take control immediately
       await self.clients.claim();
@@ -456,8 +501,12 @@ registerRoute(
               request.url,
               getContentType(cachedResponse),
             );
-            const cache = await caches.open(CACHE_NAME);
-            await cache.delete(request);
+            try {
+              const cache = await caches.open(CACHE_NAME);
+              await cache.delete(request);
+            } catch {
+              // ignore delete failures
+            }
             return null;
           }
           console.log('[SW] Cache HIT:', request.url);
