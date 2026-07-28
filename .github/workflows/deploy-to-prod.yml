@@ -2,165 +2,96 @@ name: Deploy To Production
 
 on:
   workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git branch, tag, or commit SHA to deploy (branch deploys its latest tip)"
+        required: true
+        type: string
+        default: main
 
 permissions:
   id-token: write
-  contents: write
+  contents: read
   actions: write
 
 jobs:
-  prepare-prod-deploy:
-    name: Prepare Production Deployment
+  resolve-ref:
+    name: Resolve Deploy Ref
     runs-on: ubuntu-latest
     if: github.repository == 'refly-ai/refly'
     outputs:
-      should_deploy: ${{ steps.check_release.outputs.should_deploy }}
-      project_id: ${{ steps.check_release.outputs.project_id }}
-      start_date: ${{ steps.check_release.outputs.start_date }}
-      release_branch: ${{ steps.check_release.outputs.release_branch }}
+      ref: ${{ steps.resolve.outputs.ref }}
+      sha: ${{ steps.resolve.outputs.sha }}
+      short_sha: ${{ steps.resolve.outputs.short_sha }}
     steps:
-      - name: Query active release project
-        id: check_release
-        env:
-          ORBIT_API_URL: ${{ vars.ORBIT_API_URL }}
-          ORBIT_API_KEY: ${{ secrets.ORBIT_API_KEY }}
-        run: |
-          echo "Querying for active release project..."
-
-          # Query for active release project
-          RESPONSE=$(curl -s -G "$ORBIT_API_URL/api/projects/active-release" \
-            -H "X-Orbit-API-Key: $ORBIT_API_KEY")
-
-          echo "Orbit API Response:"
-          echo "$RESPONSE" | jq .
-
-          # Check if project exists
-          PROJECT_ID=$(echo "$RESPONSE" | jq -r '.id // empty')
-
-          if [ -z "$PROJECT_ID" ]; then
-            echo "No active release project found. Skipping deployment."
-            echo "should_deploy=false" >> "$GITHUB_OUTPUT"
-            echo "project_id=" >> "$GITHUB_OUTPUT"
-            echo "start_date=" >> "$GITHUB_OUTPUT"
-            echo "release_branch=" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          # Extract project information
-          START_DATE=$(echo "$RESPONSE" | jq -r '.startDate // empty')
-          PROJECT_NAME=$(echo "$RESPONSE" | jq -r '.name // "Unknown"')
-          PROJECT_STATUS=$(echo "$RESPONSE" | jq -r '.status // "Unknown"')
-
-          echo "Found active release project:"
-          echo "  - ID: $PROJECT_ID"
-          echo "  - Name: $PROJECT_NAME"
-          echo "  - Status: $PROJECT_STATUS"
-          echo "  - Start Date: $START_DATE"
-
-          # Check if status is Staging
-          if [ "$PROJECT_STATUS" != "Staging" ]; then
-            echo "Project status is not 'Staging' (current: $PROJECT_STATUS). Skipping deployment."
-            echo "Only projects in Staging status can be deployed to production."
-            echo "should_deploy=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          if [ -z "$START_DATE" ]; then
-            echo "Error: Project found but startDate is missing"
-            echo "should_deploy=false" >> "$GITHUB_OUTPUT"
-            exit 1
-          fi
-
-          RELEASE_BRANCH="release/${START_DATE}"
-
-          echo "Project is ready for production deployment:"
-          echo "  - Release Branch: $RELEASE_BRANCH"
-
-          echo "should_deploy=true" >> "$GITHUB_OUTPUT"
-          echo "project_id=$PROJECT_ID" >> "$GITHUB_OUTPUT"
-          echo "start_date=$START_DATE" >> "$GITHUB_OUTPUT"
-          echo "release_branch=$RELEASE_BRANCH" >> "$GITHUB_OUTPUT"
-
-  ensure-release-branch:
-    name: Ensure Release Branch Exists
-    needs: prepare-prod-deploy
-    if: needs.prepare-prod-deploy.outputs.should_deploy == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
+      - name: Checkout requested ref
         uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.ref }}
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Ensure release branch exists
-        env:
-          RELEASE_BRANCH: ${{ needs.prepare-prod-deploy.outputs.release_branch }}
+      - name: Resolve commit SHA
+        id: resolve
         run: |
-          echo "Checking if branch $RELEASE_BRANCH exists..."
+          set -euo pipefail
 
-          # Check if branch exists remotely
-          if git ls-remote --heads origin "$RELEASE_BRANCH" | grep -q "$RELEASE_BRANCH"; then
-            echo "Branch $RELEASE_BRANCH exists"
-          else
-            echo "Error: Release branch $RELEASE_BRANCH does not exist"
-            echo "Production deployment requires an existing release branch from staging"
-            exit 1
-          fi
+          REQUESTED_REF="${{ inputs.ref }}"
+          SHA="$(git rev-parse HEAD)"
+          SHORT_SHA="$(git rev-parse --short=12 HEAD)"
+          SUBJECT="$(git log -1 --format='%s')"
+
+          echo "Requested ref: ${REQUESTED_REF}"
+          echo "Resolved SHA:  ${SHA}"
+          echo "Commit:        ${SUBJECT}"
+
+          {
+            echo "ref=${REQUESTED_REF}"
+            echo "sha=${SHA}"
+            echo "short_sha=${SHORT_SHA}"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Production deploy target"
+            echo ""
+            echo "- **Requested ref:** \`${REQUESTED_REF}\`"
+            echo "- **Resolved SHA:** \`${SHA}\`"
+            echo "- **Commit:** ${SUBJECT}"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   deploy-api-prod:
     name: Deploy API to Production
-    needs: [prepare-prod-deploy, ensure-release-branch]
-    if: needs.prepare-prod-deploy.outputs.should_deploy == 'true'
+    needs: resolve-ref
     uses: ./.github/workflows/deploy-api-prod.yml
     with:
-      ref: ${{ needs.prepare-prod-deploy.outputs.release_branch }}
+      ref: ${{ needs.resolve-ref.outputs.sha }}
     secrets: inherit
 
   deploy-web-prod:
     name: Deploy Web to Production
-    needs: [prepare-prod-deploy, ensure-release-branch, deploy-api-prod]
-    if: needs.prepare-prod-deploy.outputs.should_deploy == 'true'
+    needs: [resolve-ref, deploy-api-prod]
     uses: ./.github/workflows/deploy-web-prod.yml
     with:
-      ref: ${{ needs.prepare-prod-deploy.outputs.release_branch }}
+      ref: ${{ needs.resolve-ref.outputs.sha }}
     secrets: inherit
 
-  update-project-status:
-    name: Update Project Status to Done
+  summarize:
+    name: Deployment Summary
     runs-on: ubuntu-latest
-    needs: [prepare-prod-deploy, deploy-api-prod, deploy-web-prod]
-    if: success() && needs.prepare-prod-deploy.outputs.should_deploy == 'true'
+    needs: [resolve-ref, deploy-api-prod, deploy-web-prod]
+    if: always()
     steps:
-      - name: Update project status
-        env:
-          ORBIT_API_URL: ${{ vars.ORBIT_API_URL }}
-          ORBIT_API_KEY: ${{ secrets.ORBIT_API_KEY }}
-          PROJECT_ID: ${{ needs.prepare-prod-deploy.outputs.project_id }}
+      - name: Write summary
         run: |
-          echo "Updating project status to Done..."
+          {
+            echo "## Deploy To Production finished"
+            echo ""
+            echo "- **Ref:** \`${{ needs.resolve-ref.outputs.ref }}\`"
+            echo "- **SHA:** \`${{ needs.resolve-ref.outputs.sha }}\`"
+            echo "- **API:** \`${{ needs.deploy-api-prod.result }}\`"
+            echo "- **Web:** \`${{ needs.deploy-web-prod.result }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
-          # Update project status to Done
-          RESPONSE=$(curl -s -X POST "$ORBIT_API_URL/api/projects/update" \
-            -H "Content-Type: application/json" \
-            -H "X-Orbit-API-Key: $ORBIT_API_KEY" \
-            -d '{
-              "input": {
-                "status": "Done"
-              }
-            }')
-
-          echo "Update response:"
-          echo "$RESPONSE" | jq .
-
-          # Check if the update was successful
-          SUCCESS=$(echo "$RESPONSE" | jq -r '.success // false')
-
-          if [ "$SUCCESS" = "true" ]; then
-            echo "✓ Successfully updated project status to Done"
-            echo "🎉 Production deployment complete!"
-          else
-            ERROR_MSG=$(echo "$RESPONSE" | jq -r '.error // "Unknown error"')
-            echo "✗ Failed to update project status: $ERROR_MSG"
+          if [ "${{ needs.deploy-api-prod.result }}" != "success" ] || [ "${{ needs.deploy-web-prod.result }}" != "success" ]; then
+            echo "One or more deploy jobs failed."
             exit 1
           fi

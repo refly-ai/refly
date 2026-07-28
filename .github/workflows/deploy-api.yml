@@ -51,17 +51,22 @@ jobs:
         env:
           AWS_REGION: ${{ inputs.aws_region }}
         run: |
+          # Tag from the checked-out commit, not github.sha (caller workflow SHA).
+          # Otherwise deploying ref=release/* can silently reuse main's nightly image.
+          COMMIT_SHA="$(git rev-parse HEAD)"
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
           REPOSITORY="${REGISTRY}/refly-api"
-          IMAGE_TAG="${{ inputs.environment }}-${{ github.sha }}"
+          IMAGE_TAG="${{ inputs.environment }}-${COMMIT_SHA}"
           TAGS="${REPOSITORY}:${IMAGE_TAG}"
+          echo "Checked out commit: ${COMMIT_SHA}"
+          echo "Image tag: ${IMAGE_TAG}"
           echo "registry=$REGISTRY" >> "$GITHUB_OUTPUT"
           echo "repository=$REPOSITORY" >> "$GITHUB_OUTPUT"
           echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
           echo "deploy_image=${REPOSITORY}:${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
           echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
-          echo "nightly_tag=nightly-${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          echo "nightly_tag=nightly-${COMMIT_SHA}" >> "$GITHUB_OUTPUT"
 
       - name: Check for existing images
         id: check_image
