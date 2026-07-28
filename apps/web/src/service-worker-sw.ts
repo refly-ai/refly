@@ -248,12 +248,31 @@ self.addEventListener('install', (event) => {
   );
 });
 
+/** Entries worth carrying from v1 → v2 for open tabs / offline shells. */
+const isMigratableLegacyEntry = (request: Request, response: Response, url: URL): boolean => {
+  if (url.origin !== self.location.origin) {
+    return false;
+  }
+  // Hashed static JS/CSS (open-tab lazy chunks)
+  if (isStaticAssetPath(url.pathname)) {
+    return isCacheableStaticResponse(request, response);
+  }
+  // App HTML shells for offline refresh (skip home/SSR — those are NetworkOnly)
+  if (isHtmlDocumentPath(url.pathname) && url.pathname !== '/' && !isSsrPath(url.pathname)) {
+    return isCacheableHtmlResponse(response);
+  }
+  return false;
+};
+
 /**
- * Best-effort copy of MIME-valid hashed static assets from a legacy bucket into v2.
+ * Best-effort copy of migratable entries from a legacy bucket into v2.
  * Never throws: quota / put failures must not block activate (delete + claim).
- * Deletes each source entry after a successful put to avoid doubling storage use.
+ * Deletes each source entry after put to avoid doubling storage use.
  */
-const migrateValidStaticFromLegacy = async (legacyName: string, target: Cache): Promise<number> => {
+const migrateValidEntriesFromLegacy = async (
+  legacyName: string,
+  target: Cache,
+): Promise<number> => {
   let legacy: Cache;
   try {
     legacy = await caches.open(legacyName);
@@ -279,18 +298,16 @@ const migrateValidStaticFromLegacy = async (legacyName: string, target: Cache): 
       } catch {
         continue;
       }
-      if (url.origin !== self.location.origin || !isStaticAssetPath(url.pathname)) {
-        continue;
-      }
 
       const response = await legacy.match(request);
-      if (!response || !isCacheableStaticResponse(request, response)) {
+      if (!response || !isMigratableLegacyEntry(request, response, url)) {
         continue;
       }
 
       const existing = await target.match(request);
       if (!existing) {
-        await target.put(request, response.clone());
+        // response body is only used here — no clone needed
+        await target.put(request, response);
         migrated += 1;
       }
 
@@ -298,7 +315,7 @@ const migrateValidStaticFromLegacy = async (legacyName: string, target: Cache): 
       await legacy.delete(request);
     } catch (error) {
       // QuotaExceededError or transient cache errors — stop migrating, still activate
-      console.warn('[SW] Legacy static migrate stopped early:', legacyName, error);
+      console.warn('[SW] Legacy migrate stopped early:', legacyName, error);
       break;
     }
   }
@@ -314,13 +331,13 @@ self.addEventListener('activate', (event) => {
       try {
         const cache = await caches.open(CACHE_NAME);
 
-        // Preserve open-tab lazy chunks: migrate valid static from v1 → v2, then drop v1.
+        // Preserve open-tab lazy chunks + offline HTML shells from v1 → v2, then drop v1.
         // Migration is best-effort; activate must still complete on quota pressure.
         for (const name of LEGACY_CACHE_NAMES) {
           try {
-            const migrated = await migrateValidStaticFromLegacy(name, cache);
+            const migrated = await migrateValidEntriesFromLegacy(name, cache);
             if (migrated > 0) {
-              console.log(`[SW] Migrated ${migrated} static assets from ${name}`);
+              console.log(`[SW] Migrated ${migrated} cache entries from ${name}`);
             }
           } catch (error) {
             console.warn(`[SW] Legacy migrate failed for ${name}:`, error);
