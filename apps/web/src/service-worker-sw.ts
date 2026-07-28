@@ -248,44 +248,62 @@ self.addEventListener('install', (event) => {
   );
 });
 
-/** Copy MIME-valid hashed static assets from a legacy bucket into v2 before delete. */
+/**
+ * Best-effort copy of MIME-valid hashed static assets from a legacy bucket into v2.
+ * Never throws: quota / put failures must not block activate (delete + claim).
+ * Deletes each source entry after a successful put to avoid doubling storage use.
+ */
 const migrateValidStaticFromLegacy = async (legacyName: string, target: Cache): Promise<number> => {
-  let legacy: Cache | undefined;
+  let legacy: Cache;
   try {
     legacy = await caches.open(legacyName);
   } catch {
     return 0;
   }
 
-  const keys = await legacy.keys();
-  const results = await Promise.all(
-    keys.map(async (request): Promise<boolean> => {
+  let keys: readonly Request[];
+  try {
+    keys = await legacy.keys();
+  } catch {
+    return 0;
+  }
+
+  let migrated = 0;
+
+  // Sequential: release source entries as we go so quota stays roughly flat.
+  for (const request of keys) {
+    try {
       let url: URL;
       try {
         url = new URL(request.url);
       } catch {
-        return false;
+        continue;
       }
       if (url.origin !== self.location.origin || !isStaticAssetPath(url.pathname)) {
-        return false;
+        continue;
       }
 
       const response = await legacy.match(request);
       if (!response || !isCacheableStaticResponse(request, response)) {
-        return false;
+        continue;
       }
 
       const existing = await target.match(request);
-      if (existing) {
-        return false;
+      if (!existing) {
+        await target.put(request, response.clone());
+        migrated += 1;
       }
 
-      await target.put(request, response.clone());
-      return true;
-    }),
-  );
+      // Free space whether we copied or v2 already had it
+      await legacy.delete(request);
+    } catch (error) {
+      // QuotaExceededError or transient cache errors — stop migrating, still activate
+      console.warn('[SW] Legacy static migrate stopped early:', legacyName, error);
+      break;
+    }
+  }
 
-  return results.filter(Boolean).length;
+  return migrated;
 };
 
 self.addEventListener('activate', (event) => {
@@ -293,22 +311,34 @@ self.addEventListener('activate', (event) => {
 
   event.waitUntil(
     (async () => {
-      const cache = await caches.open(CACHE_NAME);
+      try {
+        const cache = await caches.open(CACHE_NAME);
 
-      // Preserve open-tab lazy chunks: migrate valid static from v1 → v2, then drop v1.
-      // Do not migrate HTML shells (stale) or poisoned MIME entries.
-      for (const name of LEGACY_CACHE_NAMES) {
-        const migrated = await migrateValidStaticFromLegacy(name, cache);
-        if (migrated > 0) {
-          console.log(`[SW] Migrated ${migrated} static assets from ${name}`);
+        // Preserve open-tab lazy chunks: migrate valid static from v1 → v2, then drop v1.
+        // Migration is best-effort; activate must still complete on quota pressure.
+        for (const name of LEGACY_CACHE_NAMES) {
+          try {
+            const migrated = await migrateValidStaticFromLegacy(name, cache);
+            if (migrated > 0) {
+              console.log(`[SW] Migrated ${migrated} static assets from ${name}`);
+            }
+          } catch (error) {
+            console.warn(`[SW] Legacy migrate failed for ${name}:`, error);
+          }
+          try {
+            const deleted = await caches.delete(name);
+            if (deleted) {
+              console.log(`[SW] Deleted legacy cache: ${name}`);
+            }
+          } catch (error) {
+            console.warn(`[SW] Legacy delete failed for ${name}:`, error);
+          }
         }
-        const deleted = await caches.delete(name);
-        if (deleted) {
-          console.log(`[SW] Deleted legacy cache: ${name}`);
-        }
+      } catch (error) {
+        console.error('[SW] Activate cache setup failed:', error);
       }
 
-      // Take control immediately
+      // Always claim so MIME guards take effect even if migration was partial
       await self.clients.claim();
 
       console.log('[SW] Activated, waiting for page load before starting precache');
