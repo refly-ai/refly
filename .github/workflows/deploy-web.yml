@@ -128,8 +128,9 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           projectName: ${{ inputs.cloudflare_project }}
-          # Must match the Pages project's production branch to attach production aliases.
-          # Build content still comes from the checked-out ref above.
-          branch: ${{ inputs.environment == 'production' && 'main' || (inputs.ref || github.ref_name) }}
+          # Always the Pages project's production branch so prod/staging custom
+          # domains update. Build content still comes from the checked-out ref.
+          # Do not pass inputs.ref here (may be tag/SHA/release/* → preview only).
+          branch: main
           workingDirectory: apps/web
           directory: dist
