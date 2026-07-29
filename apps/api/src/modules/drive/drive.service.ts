@@ -66,10 +66,16 @@ import { readingTime } from 'reading-time-estimator';
 import { MiscService } from '../misc/misc.service';
 
 // Shared across concurrent skill invocations to cap peak RSS from Sharp/libvips + base64 copies.
+const MIN_IMAGE_PROCESS_CONCURRENCY = 1;
+const MAX_IMAGE_PROCESS_CONCURRENCY = 4;
+const DEFAULT_IMAGE_PROCESS_CONCURRENCY = 2;
 const rawImageConcurrency = Number.parseInt(process.env.IMAGE_PROCESS_CONCURRENCY ?? '', 10);
 const imageProcessConcurrency = Number.isFinite(rawImageConcurrency)
-  ? Math.min(4, Math.max(1, rawImageConcurrency))
-  : 2;
+  ? Math.min(
+      MAX_IMAGE_PROCESS_CONCURRENCY,
+      Math.max(MIN_IMAGE_PROCESS_CONCURRENCY, rawImageConcurrency),
+    )
+  : DEFAULT_IMAGE_PROCESS_CONCURRENCY;
 const imageProcessLimit = pLimit(imageProcessConcurrency);
 
 export interface ExtendedUpsertDriveFileRequest extends UpsertDriveFileRequest {

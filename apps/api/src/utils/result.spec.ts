@@ -2,8 +2,17 @@ jest.mock('@refly/utils', () => ({
   aggregateTokenUsage: (items: unknown[]) => items ?? [],
 }));
 
-import { ResultAggregator } from './result';
+import { PERSIST_DEBOUNCE_MS, ResultAggregator } from './result';
 import type { StepService } from '../modules/step/step.service';
+
+/** Flush fake timers + microtasks (jest env here lacks advanceTimersByTimeAsync). */
+async function advanceAndFlush(ms: number) {
+  jest.advanceTimersByTime(ms);
+  // Drain promise chains from timer → persistOnce → setCache
+  for (let i = 0; i < 10; i++) {
+    await Promise.resolve();
+  }
+}
 
 describe('ResultAggregator', () => {
   const resultId = 'result-1';
@@ -49,9 +58,7 @@ describe('ResultAggregator', () => {
 
     expect(setCacheCalls).toHaveLength(0);
 
-    jest.advanceTimersByTime(200);
-    await Promise.resolve();
-    await Promise.resolve();
+    await advanceAndFlush(PERSIST_DEBOUNCE_MS);
 
     expect(setCacheCalls.length).toBeGreaterThanOrEqual(1);
     expect(setCacheCalls.length).toBeLessThan(chunks.length);
@@ -63,6 +70,39 @@ describe('ResultAggregator', () => {
     const lastWrite = setCacheCalls[setCacheCalls.length - 1];
     expect(lastWrite.key).toBe(cacheKey);
     expect((lastWrite.steps.answer as { content: string }).content).toBe('Hello world! more');
+  });
+
+  it('re-debounces mutations that arrive during an in-flight write (no immediate back-to-back loop)', async () => {
+    let resolveSet: (() => void) | undefined;
+    const setGate = new Promise<void>((resolve) => {
+      resolveSet = resolve;
+    });
+
+    stepService.setCache.mockImplementation(async (key: string, steps: Record<string, unknown>) => {
+      setCacheCalls.push({ key, steps });
+      await setGate;
+    });
+
+    aggregator.handleStreamContent({ step: { name: 'answer' } } as any, 'a');
+    await advanceAndFlush(PERSIST_DEBOUNCE_MS);
+
+    expect(setCacheCalls).toHaveLength(1);
+
+    // Mutations while first write is still in flight
+    aggregator.handleStreamContent({ step: { name: 'answer' } } as any, 'b');
+    aggregator.handleStreamContent({ step: { name: 'answer' } } as any, 'c');
+
+    // Completing the write must not immediately issue another setCache
+    resolveSet?.();
+    for (let i = 0; i < 10; i++) {
+      await Promise.resolve();
+    }
+    expect(setCacheCalls).toHaveLength(1);
+
+    // Follow-up write only after another debounce window
+    await advanceAndFlush(PERSIST_DEBOUNCE_MS);
+    expect(setCacheCalls).toHaveLength(2);
+    expect((setCacheCalls[1].steps.answer as { content: string }).content).toBe('abc');
   });
 
   it('does not recreate Redis key via setCache after clearCache (in-flight + post-clear)', async () => {
@@ -77,10 +117,7 @@ describe('ResultAggregator', () => {
     });
 
     aggregator.handleStreamContent({ step: { name: 'answer' } } as any, 'partial');
-    jest.advanceTimersByTime(200);
-    // Allow flush to start and hit the gated setCache
-    await Promise.resolve();
-    await Promise.resolve();
+    await advanceAndFlush(PERSIST_DEBOUNCE_MS);
 
     expect(stepService.setCache).toHaveBeenCalled();
     const callsBeforeClear = setCacheCalls.length;
@@ -93,17 +130,13 @@ describe('ResultAggregator', () => {
     await clearPromise;
 
     // Drain any microtasks / timers that might try to rearm
-    jest.advanceTimersByTime(500);
-    await Promise.resolve();
-    await Promise.resolve();
+    await advanceAndFlush(PERSIST_DEBOUNCE_MS * 2);
 
     expect(clearCacheCalls).toEqual([{ resultId, version }]);
     expect(setCacheCalls.length).toBe(callsBeforeClear);
 
     aggregator.handleStreamContent({ step: { name: 'answer' } } as any, ' post-clear');
-    jest.advanceTimersByTime(500);
-    await Promise.resolve();
-    await Promise.resolve();
+    await advanceAndFlush(PERSIST_DEBOUNCE_MS * 2);
 
     expect(setCacheCalls.length).toBe(callsBeforeClear);
 
@@ -116,9 +149,7 @@ describe('ResultAggregator', () => {
 
   it('mutation after clearCache does not call setCache again', async () => {
     aggregator.handleStreamContent({ step: { name: 'answer' } } as any, 'before');
-    jest.advanceTimersByTime(200);
-    await Promise.resolve();
-    await Promise.resolve();
+    await advanceAndFlush(PERSIST_DEBOUNCE_MS);
 
     expect(setCacheCalls.length).toBeGreaterThanOrEqual(1);
     const afterFirstPersist = setCacheCalls.length;
@@ -137,10 +168,37 @@ describe('ResultAggregator', () => {
       } as any,
     );
 
-    jest.advanceTimersByTime(500);
-    await Promise.resolve();
+    await advanceAndFlush(PERSIST_DEBOUNCE_MS * 2);
     await aggregator.getSteps({ resultId, version });
 
     expect(setCacheCalls.length).toBe(afterFirstPersist);
+  });
+
+  it('abort flushes pending snapshot and rejects further schedule', async () => {
+    aggregator.handleStreamContent({ step: { name: 'answer' } } as any, 'pending');
+    expect(setCacheCalls).toHaveLength(0);
+
+    aggregator.abort();
+    for (let i = 0; i < 10; i++) {
+      await Promise.resolve();
+    }
+
+    expect(setCacheCalls.length).toBeGreaterThanOrEqual(1);
+    expect((setCacheCalls[0].steps.answer as { content: string }).content).toBe('pending');
+
+    const afterAbort = setCacheCalls.length;
+    aggregator.handleStreamContent({ step: { name: 'answer' } } as any, ' ignored');
+    aggregator.addUsageItem(
+      { step: { name: 'answer' } } as any,
+      {
+        modelName: 'm',
+        modelProvider: 'p',
+        inputTokens: 1,
+        outputTokens: 1,
+      } as any,
+    );
+    await advanceAndFlush(PERSIST_DEBOUNCE_MS * 2);
+
+    expect(setCacheCalls.length).toBe(afterAbort);
   });
 });

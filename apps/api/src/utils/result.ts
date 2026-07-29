@@ -15,7 +15,7 @@ export interface StepData {
   usageItems: TokenUsageItem[];
 }
 
-const PERSIST_DEBOUNCE_MS = 200;
+export const PERSIST_DEBOUNCE_MS = 200;
 
 export class ResultAggregator {
   /**
@@ -69,51 +69,82 @@ export class ResultAggregator {
     };
   }
 
+  private clearPersistTimer() {
+    if (this.persistTimer != null) {
+      clearTimeout(this.persistTimer);
+      this.persistTimer = null;
+    }
+  }
+
   private schedulePersistSteps() {
     // Terminal after clearCache: allow in-memory mutations but never rearm Redis writes.
     if (this.persistCleared) {
       return;
     }
     this.persistDirty = true;
-    if (this.persistTimer != null) {
+    if (this.persistTimer != null || this.persistInFlight) {
+      // Coalesce: timer already armed, or a write is in flight (re-arm after it finishes).
       return;
     }
     this.persistTimer = setTimeout(() => {
       this.persistTimer = null;
-      void this.flushPersistSteps();
+      void this.runDebouncedPersist();
     }, PERSIST_DEBOUNCE_MS);
   }
 
   /**
-   * Force-flush pending snapshot to Redis (latest-wins single-flight).
-   * Coalesces concurrent callers; if dirty again after a write, runs one more persist.
-   * No-ops Redis writes once clearCache has run (persistCleared is sticky).
+   * Timer-driven path: one write, then re-debounce if mutations arrived during I/O.
+   * Avoids back-to-back Redis snapshots under continuous streaming.
    */
-  private async flushPersistSteps(): Promise<void> {
-    if (this.persistCleared) {
-      if (this.persistTimer != null) {
-        clearTimeout(this.persistTimer);
-        this.persistTimer = null;
+  private async runDebouncedPersist(): Promise<void> {
+    if (this.persistCleared || !this.persistDirty) {
+      return;
+    }
+    if (this.persistInFlight) {
+      await this.persistInFlight;
+      if (this.persistDirty && !this.persistCleared) {
+        this.schedulePersistSteps();
       }
       return;
     }
 
-    if (this.persistTimer != null) {
-      clearTimeout(this.persistTimer);
-      this.persistTimer = null;
+    const run = this.persistOnce();
+    this.persistInFlight = run;
+    try {
+      await run;
+    } finally {
+      if (this.persistInFlight === run) {
+        this.persistInFlight = null;
+      }
     }
 
+    if (this.persistDirty && !this.persistCleared) {
+      this.schedulePersistSteps();
+    }
+  }
+
+  /**
+   * Force-flush pending snapshot to Redis (latest-wins single-flight).
+   * Used by getSteps/abort — drains until clean so final snapshot is not lost.
+   * No-ops Redis writes once clearCache has run (persistCleared is sticky).
+   */
+  private async flushPersistSteps(): Promise<void> {
+    if (this.persistCleared) {
+      this.clearPersistTimer();
+      return;
+    }
+
+    this.clearPersistTimer();
     // Ensure at least one attempt when explicitly flushed (e.g. getSteps).
     this.persistDirty = true;
 
     while (this.persistDirty && !this.persistCleared) {
       if (this.persistInFlight) {
         await this.persistInFlight;
-        // In-flight may have cleared dirty; if a race left us dirty again, loop.
         continue;
       }
 
-      const run = this.runPersistLoop();
+      const run = this.persistOnce();
       this.persistInFlight = run;
       try {
         await run;
@@ -125,11 +156,13 @@ export class ResultAggregator {
     }
   }
 
-  private async runPersistLoop(): Promise<void> {
-    while (this.persistDirty && !this.persistCleared) {
-      this.persistDirty = false;
-      await this.persistStepsNow();
+  /** Single snapshot write; clears dirty before I/O so concurrent mutations re-dirty. */
+  private async persistOnce(): Promise<void> {
+    if (!this.persistDirty || this.persistCleared) {
+      return;
     }
+    this.persistDirty = false;
+    await this.persistStepsNow();
   }
 
   private async persistStepsNow() {
@@ -159,10 +192,9 @@ export class ResultAggregator {
 
   abort() {
     this.aborted = true;
-    if (this.persistTimer != null) {
-      clearTimeout(this.persistTimer);
-      this.persistTimer = null;
-    }
+    this.clearPersistTimer();
+    // Ensure the last buffered snapshot is not lost if no getSteps()/clearCache() follows.
+    void this.flushPersistSteps();
   }
 
   addSkillEvent(event: SkillEvent) {
@@ -208,6 +240,9 @@ export class ResultAggregator {
   }
 
   addUsageItem(meta: SkillRunnableMeta, usage: TokenUsageItem) {
+    if (this.aborted) {
+      return;
+    }
     const step = this.getOrInitData(meta.step?.name);
     step.usageItems.push(usage);
     this.data[step.name] = step;
@@ -261,10 +296,7 @@ export class ResultAggregator {
   }
 
   async clearCache() {
-    if (this.persistTimer != null) {
-      clearTimeout(this.persistTimer);
-      this.persistTimer = null;
-    }
+    this.clearPersistTimer();
     this.persistDirty = false;
     this.persistCleared = true;
 
