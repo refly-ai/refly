@@ -30,6 +30,9 @@ env:
     value: "production"
   - name: GOOGLE_APPLICATION_CREDENTIALS
     value: "/var/secrets/google/credentials.json"
+  # Cap glibc arenas to reduce RSS fragmentation under Sharp/libvips (see sharp Linux allocator docs).
+  - name: MALLOC_ARENA_MAX
+    value: "2"
 
 envFrom:
   configMapRef:
