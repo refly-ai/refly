@@ -65,6 +65,24 @@ import { SubscriptionService } from '../subscription/subscription.service';
 import { readingTime } from 'reading-time-estimator';
 import { MiscService } from '../misc/misc.service';
 
+// Shared across concurrent skill invocations to cap peak RSS from Sharp/libvips + base64 copies.
+// Lazy: process.env is only reliable after ConfigModule.forRoot loads .env (not at import time).
+const MIN_IMAGE_PROCESS_CONCURRENCY = 1;
+const MAX_IMAGE_PROCESS_CONCURRENCY = 4;
+const DEFAULT_IMAGE_PROCESS_CONCURRENCY = 2;
+let imageProcessLimit: ReturnType<typeof pLimit> | undefined;
+
+function getImageProcessLimit(): ReturnType<typeof pLimit> {
+  if (!imageProcessLimit) {
+    const raw = Number.parseInt(process.env.IMAGE_PROCESS_CONCURRENCY ?? '', 10);
+    const concurrency = Number.isFinite(raw)
+      ? Math.min(MAX_IMAGE_PROCESS_CONCURRENCY, Math.max(MIN_IMAGE_PROCESS_CONCURRENCY, raw))
+      : DEFAULT_IMAGE_PROCESS_CONCURRENCY;
+    imageProcessLimit = pLimit(concurrency);
+  }
+  return imageProcessLimit;
+}
+
 export interface ExtendedUpsertDriveFileRequest extends UpsertDriveFileRequest {
   buffer?: Buffer;
 }
@@ -103,6 +121,10 @@ export class DriveService implements OnModuleInit {
   async onModuleInit() {
     // Use moduleRef.get with { strict: false } to resolve circular dependency at runtime
     this.subscriptionService = this.moduleRef.get(SubscriptionService, { strict: false });
+    // Limits libvips internal threads per process to reduce native allocator pressure under concurrent image ops.
+    sharp.concurrency(1);
+    // Init after ConfigModule has loaded .env so IMAGE_PROCESS_CONCURRENCY is honored.
+    getImageProcessLimit();
   }
 
   /**
@@ -1192,54 +1214,56 @@ export class DriveService implements OnModuleInit {
     try {
       if (fileMode === 'base64') {
         const urls = await Promise.all(
-          files.map(async (file) => {
-            const driveStorageKey = this.generateStorageKey(user, file);
+          files.map((file) =>
+            getImageProcessLimit()(async () => {
+              const driveStorageKey = this.generateStorageKey(user, file);
 
-            try {
-              const data = await this.internalOss.getObject(driveStorageKey);
-              const chunks: Buffer[] = [];
+              try {
+                const data = await this.internalOss.getObject(driveStorageKey);
+                const chunks: Buffer[] = [];
 
-              for await (const chunk of data) {
-                chunks.push(chunk);
+                for await (const chunk of data) {
+                  chunks.push(chunk);
+                }
+
+                let buffer = Buffer.concat(chunks);
+
+                // Compress image before converting to base64
+                const maxArea = Number.parseInt(process.env.IMAGE_MAX_AREA) || 600 * 600;
+                const metadata = await sharp(buffer).metadata();
+                const originalWidth = metadata?.width ?? 0;
+                const originalHeight = metadata?.height ?? 0;
+                const isGif = metadata?.format === 'gif';
+
+                // Calculate scaling factor based on max area
+                const originalArea = originalWidth * originalHeight;
+                const scaleFactor = originalArea > maxArea ? Math.sqrt(maxArea / originalArea) : 1;
+
+                // Resize and convert format if needed
+                if (scaleFactor < 1 || !isGif) {
+                  const processedBuffer = await sharp(buffer)
+                    .resize({
+                      width: Math.round(originalWidth * scaleFactor),
+                      height: Math.round(originalHeight * scaleFactor),
+                      fit: 'fill',
+                    })
+                    [isGif ? 'toFormat' : 'toFormat'](isGif ? 'gif' : 'webp')
+                    .toBuffer();
+                  buffer = processedBuffer;
+                }
+
+                const base64 = buffer.toString('base64');
+                const contentType = isGif ? 'image/gif' : 'image/webp';
+
+                return `data:${contentType};base64,${base64}`;
+              } catch (error) {
+                this.logger.error(
+                  `Failed to generate compressed base64 for drive file ${file.fileId}: ${error.stack}`,
+                );
+                return '';
               }
-
-              let buffer = Buffer.concat(chunks);
-
-              // Compress image before converting to base64
-              const maxArea = Number.parseInt(process.env.IMAGE_MAX_AREA) || 600 * 600;
-              const metadata = await sharp(buffer).metadata();
-              const originalWidth = metadata?.width ?? 0;
-              const originalHeight = metadata?.height ?? 0;
-              const isGif = metadata?.format === 'gif';
-
-              // Calculate scaling factor based on max area
-              const originalArea = originalWidth * originalHeight;
-              const scaleFactor = originalArea > maxArea ? Math.sqrt(maxArea / originalArea) : 1;
-
-              // Resize and convert format if needed
-              if (scaleFactor < 1 || !isGif) {
-                const processedBuffer = await sharp(buffer)
-                  .resize({
-                    width: Math.round(originalWidth * scaleFactor),
-                    height: Math.round(originalHeight * scaleFactor),
-                    fit: 'fill',
-                  })
-                  [isGif ? 'toFormat' : 'toFormat'](isGif ? 'gif' : 'webp')
-                  .toBuffer();
-                buffer = Buffer.from(processedBuffer);
-              }
-
-              const base64 = buffer.toString('base64');
-              const contentType = isGif ? 'image/gif' : 'image/webp';
-
-              return `data:${contentType};base64,${base64}`;
-            } catch (error) {
-              this.logger.error(
-                `Failed to generate compressed base64 for drive file ${file.fileId}: ${error.stack}`,
-              );
-              return '';
-            }
-          }),
+            }),
+          ),
         );
         return urls.filter(Boolean);
       }

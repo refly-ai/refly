@@ -15,6 +15,8 @@ export interface StepData {
   usageItems: TokenUsageItem[];
 }
 
+export const PERSIST_DEBOUNCE_MS = 200;
+
 export class ResultAggregator {
   /**
    * Step title list, in the order of sending
@@ -30,6 +32,12 @@ export class ResultAggregator {
    * Whether the skill invocation is aborted
    */
   private aborted = false;
+
+  private persistTimer: ReturnType<typeof setTimeout> | null = null;
+  private persistInFlight: Promise<void> | null = null;
+  private persistDirty = false;
+  /** Set when cache was cleared; in-flight writes should not overwrite after clear. */
+  private persistCleared = false;
 
   constructor(
     private readonly stepService: StepService,
@@ -61,7 +69,107 @@ export class ResultAggregator {
     };
   }
 
-  private async persistSteps() {
+  private clearPersistTimer() {
+    if (this.persistTimer != null) {
+      clearTimeout(this.persistTimer);
+      this.persistTimer = null;
+    }
+  }
+
+  private schedulePersistSteps() {
+    // Terminal after clearCache: allow in-memory mutations but never rearm Redis writes.
+    if (this.persistCleared) {
+      return;
+    }
+    this.persistDirty = true;
+    if (this.persistTimer != null || this.persistInFlight) {
+      // Coalesce: timer already armed, or a write is in flight (re-arm after it finishes).
+      return;
+    }
+    this.persistTimer = setTimeout(() => {
+      this.persistTimer = null;
+      void this.runDebouncedPersist();
+    }, PERSIST_DEBOUNCE_MS);
+  }
+
+  /**
+   * Timer-driven path: one write, then re-debounce if mutations arrived during I/O.
+   * Avoids back-to-back Redis snapshots under continuous streaming.
+   */
+  private async runDebouncedPersist(): Promise<void> {
+    if (this.persistCleared || !this.persistDirty) {
+      return;
+    }
+    if (this.persistInFlight) {
+      await this.persistInFlight;
+      if (this.persistDirty && !this.persistCleared) {
+        this.schedulePersistSteps();
+      }
+      return;
+    }
+
+    const run = this.persistOnce();
+    this.persistInFlight = run;
+    try {
+      await run;
+    } finally {
+      if (this.persistInFlight === run) {
+        this.persistInFlight = null;
+      }
+    }
+
+    if (this.persistDirty && !this.persistCleared) {
+      this.schedulePersistSteps();
+    }
+  }
+
+  /**
+   * Force-flush pending snapshot to Redis (latest-wins single-flight).
+   * Used by getSteps/abort — drains until clean so final snapshot is not lost.
+   * No-ops Redis writes once clearCache has run (persistCleared is sticky).
+   */
+  private async flushPersistSteps(): Promise<void> {
+    if (this.persistCleared) {
+      this.clearPersistTimer();
+      return;
+    }
+
+    this.clearPersistTimer();
+    // Ensure at least one attempt when explicitly flushed (e.g. getSteps).
+    this.persistDirty = true;
+
+    while (this.persistDirty && !this.persistCleared) {
+      if (this.persistInFlight) {
+        await this.persistInFlight;
+        continue;
+      }
+
+      const run = this.persistOnce();
+      this.persistInFlight = run;
+      try {
+        await run;
+      } finally {
+        if (this.persistInFlight === run) {
+          this.persistInFlight = null;
+        }
+      }
+    }
+  }
+
+  /** Single snapshot write; clears dirty before I/O so concurrent mutations re-dirty. */
+  private async persistOnce(): Promise<void> {
+    if (!this.persistDirty || this.persistCleared) {
+      return;
+    }
+    this.persistDirty = false;
+    await this.persistStepsNow();
+  }
+
+  private async persistStepsNow() {
+    if (this.persistCleared) {
+      return;
+    }
+
     try {
       // Generate Map with step name as key and StepData as value
       const stepsMap = new Map<string, StepData>();
@@ -84,6 +192,9 @@ export class ResultAggregator {
 
   abort() {
     this.aborted = true;
+    this.clearPersistTimer();
+    // Ensure the last buffered snapshot is not lost if no getSteps()/clearCache() follows.
+    void this.flushPersistSteps();
   }
 
   addSkillEvent(event: SkillEvent) {
@@ -125,14 +236,17 @@ export class ResultAggregator {
         }
     }
     this.data[step.name] = step;
-    void this.persistSteps();
+    this.schedulePersistSteps();
   }
 
   addUsageItem(meta: SkillRunnableMeta, usage: TokenUsageItem) {
+    if (this.aborted) {
+      return;
+    }
     const step = this.getOrInitData(meta.step?.name);
     step.usageItems.push(usage);
     this.data[step.name] = step;
-    void this.persistSteps();
+    this.schedulePersistSteps();
   }
 
   handleStreamContent(meta: SkillRunnableMeta, content: string, reasoningContent?: string) {
@@ -149,7 +263,7 @@ export class ResultAggregator {
     }
 
     this.data[step.name] = step;
-    this.persistSteps();
+    this.schedulePersistSteps();
   }
 
   async getSteps({
@@ -159,7 +273,7 @@ export class ResultAggregator {
     resultId: string;
     version: number;
   }): Promise<Prisma.ActionStepCreateManyInput[]> {
-    await this.persistSteps();
+    await this.flushPersistSteps();
     return this.stepNames.map((stepName, order) => {
       const { name, content, structuredData, artifacts, usageItems, logs, reasoningContent } =
         this.data[stepName];
@@ -182,6 +296,14 @@ export class ResultAggregator {
   }
 
   async clearCache() {
+    this.clearPersistTimer();
+    this.persistDirty = false;
+    this.persistCleared = true;
+
+    if (this.persistInFlight) {
+      await this.persistInFlight;
+    }
+
     await this.stepService.clearCache(this.resultId, this.version);
   }
 }

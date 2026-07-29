@@ -32,6 +32,10 @@ RUN pnpm build:api
 FROM node:24.13.1-slim AS production
 WORKDIR /app
 
+# Cap glibc arenas to reduce RSS fragmentation under Sharp/libvips (defense-in-depth for non-helm deploys).
+# See: https://sharp.pixelplumbing.com/install/#linux-memory-allocator
+ENV MALLOC_ARENA_MAX=2
+
 # Install system dependencies in a single layer
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
