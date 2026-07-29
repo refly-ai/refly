@@ -66,17 +66,22 @@ import { readingTime } from 'reading-time-estimator';
 import { MiscService } from '../misc/misc.service';
 
 // Shared across concurrent skill invocations to cap peak RSS from Sharp/libvips + base64 copies.
+// Lazy: process.env is only reliable after ConfigModule.forRoot loads .env (not at import time).
 const MIN_IMAGE_PROCESS_CONCURRENCY = 1;
 const MAX_IMAGE_PROCESS_CONCURRENCY = 4;
 const DEFAULT_IMAGE_PROCESS_CONCURRENCY = 2;
-const rawImageConcurrency = Number.parseInt(process.env.IMAGE_PROCESS_CONCURRENCY ?? '', 10);
-const imageProcessConcurrency = Number.isFinite(rawImageConcurrency)
-  ? Math.min(
-      MAX_IMAGE_PROCESS_CONCURRENCY,
-      Math.max(MIN_IMAGE_PROCESS_CONCURRENCY, rawImageConcurrency),
-    )
-  : DEFAULT_IMAGE_PROCESS_CONCURRENCY;
-const imageProcessLimit = pLimit(imageProcessConcurrency);
+let imageProcessLimit: ReturnType<typeof pLimit> | undefined;
+
+function getImageProcessLimit(): ReturnType<typeof pLimit> {
+  if (!imageProcessLimit) {
+    const raw = Number.parseInt(process.env.IMAGE_PROCESS_CONCURRENCY ?? '', 10);
+    const concurrency = Number.isFinite(raw)
+      ? Math.min(MAX_IMAGE_PROCESS_CONCURRENCY, Math.max(MIN_IMAGE_PROCESS_CONCURRENCY, raw))
+      : DEFAULT_IMAGE_PROCESS_CONCURRENCY;
+    imageProcessLimit = pLimit(concurrency);
+  }
+  return imageProcessLimit;
+}
 
 export interface ExtendedUpsertDriveFileRequest extends UpsertDriveFileRequest {
   buffer?: Buffer;
@@ -118,6 +123,8 @@ export class DriveService implements OnModuleInit {
     this.subscriptionService = this.moduleRef.get(SubscriptionService, { strict: false });
     // Limits libvips internal threads per process to reduce native allocator pressure under concurrent image ops.
     sharp.concurrency(1);
+    // Init after ConfigModule has loaded .env so IMAGE_PROCESS_CONCURRENCY is honored.
+    getImageProcessLimit();
   }
 
   /**
@@ -1208,7 +1215,7 @@ export class DriveService implements OnModuleInit {
       if (fileMode === 'base64') {
         const urls = await Promise.all(
           files.map((file) =>
-            imageProcessLimit(async () => {
+            getImageProcessLimit()(async () => {
               const driveStorageKey = this.generateStorageKey(user, file);
 
               try {
