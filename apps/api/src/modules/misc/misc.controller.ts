@@ -12,6 +12,7 @@ import {
   Query,
 } from '@nestjs/common';
 import path from 'node:path';
+import { ConfigService } from '@nestjs/config';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { MiscService } from '../misc/misc.service';
 import {
@@ -32,7 +33,37 @@ import { checkHttpCache, send304NotModified, applyCacheHeaders } from '../../uti
 
 @Controller('v1/misc')
 export class MiscController {
-  constructor(private readonly miscService: MiscService) {}
+  constructor(
+    private readonly miscService: MiscService,
+    private readonly configService: ConfigService,
+  ) {}
+
+  /**
+   * Build CORS headers for file-serving endpoints.
+   * Only origins in the ORIGIN allowlist (same source as the global CORS
+   * config in main.ts) get credentialed access; other origins receive no
+   * Access-Control-Allow-Origin header, so browsers block cross-origin reads
+   * of authenticated responses. Cross-Origin-Resource-Policy stays
+   * 'cross-origin' so legitimate no-cors embedding (e.g. <img>) keeps working.
+   */
+  private buildCorsHeaders(origin: string | undefined): Record<string, string> {
+    const allowedOrigins = (this.configService.get<string>('origin') ?? '')
+      .split(',')
+      .map((o) => o.trim())
+      .filter(Boolean);
+
+    const headers: Record<string, string> = {
+      'Cross-Origin-Resource-Policy': 'cross-origin',
+    };
+
+    if (origin && allowedOrigins.includes(origin)) {
+      headers['Access-Control-Allow-Origin'] = origin;
+      headers['Access-Control-Allow-Credentials'] = 'true';
+      headers['Vary'] = 'Origin';
+    }
+
+    return headers;
+  }
 
   @UseGuards(JwtAuthGuard)
   @Post('scrape')
@@ -104,7 +135,7 @@ export class MiscController {
   ): Promise<void> {
     const storageKey = `static/${objectKey}`;
     const filename = path.basename(objectKey);
-    const origin = req.headers.origin;
+    const corsHeaders = this.buildCorsHeaders(req.headers.origin);
 
     // First, get only metadata (no file content loaded yet)
     const { contentType, lastModified } = await this.miscService.getInternalFileMetadata(
@@ -119,12 +150,6 @@ export class MiscController {
       maxAge: 0,
       immutable: false,
     });
-
-    const corsHeaders = {
-      'Access-Control-Allow-Origin': origin || '*',
-      'Access-Control-Allow-Credentials': 'true',
-      'Cross-Origin-Resource-Policy': 'cross-origin',
-    };
 
     // If client has valid cache, return 304 Not Modified (without loading file content)
     if (cacheResult.useCache) {
