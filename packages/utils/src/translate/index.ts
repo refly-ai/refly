@@ -15,11 +15,45 @@ const RETRY_CONFIG = {
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * Calculate retry delay time with exponential backoff
+ * Parse Retry-After header value.
+ * @param retryAfter Retry-After header value
+ * @returns Delay time in milliseconds, or null if the header is invalid
+ */
+const parseRetryAfterDelay = (retryAfter: string | null): number | null => {
+  if (!retryAfter) {
+    return null;
+  }
+
+  const retryAfterValue = retryAfter.trim();
+  if (!retryAfterValue) {
+    return null;
+  }
+
+  const retryAfterSeconds = Number(retryAfterValue);
+  if (Number.isFinite(retryAfterSeconds)) {
+    return retryAfterSeconds >= 0 ? retryAfterSeconds * 1000 : null;
+  }
+
+  const retryAfterDate = Date.parse(retryAfterValue);
+  if (!Number.isNaN(retryAfterDate)) {
+    return Math.max(retryAfterDate - Date.now(), 0);
+  }
+
+  return null;
+};
+
+/**
+ * Calculate retry delay time with Retry-After or exponential backoff
  * @param attempt Retry attempt number (starting from 0)
+ * @param retryAfter Retry-After header value
  * @returns Delay time in milliseconds
  */
-const calculateRetryDelay = (attempt: number): number => {
+const calculateRetryDelay = (attempt: number, retryAfter?: string | null): number => {
+  const retryAfterDelay = parseRetryAfterDelay(retryAfter ?? null);
+  if (retryAfterDelay !== null) {
+    return retryAfterDelay;
+  }
+
   const delayTime = RETRY_CONFIG.baseDelay * RETRY_CONFIG.backoffMultiplier ** attempt;
   return Math.min(delayTime, RETRY_CONFIG.maxDelay);
 };
@@ -85,7 +119,10 @@ const fetchWithRetry = async (url: string, options?: RequestInit): Promise<Respo
         (response.status === 429 || response.status >= 500) &&
         attempt < RETRY_CONFIG.maxRetries
       ) {
-        const retryDelay = calculateRetryDelay(attempt);
+        const retryDelay = calculateRetryDelay(
+          attempt,
+          response.status === 429 ? response.headers.get('Retry-After') : null,
+        );
         console.warn(
           `Translation request failed with status ${response.status}, retrying in ${retryDelay}ms (attempt ${attempt + 1}/${RETRY_CONFIG.maxRetries + 1})`,
         );
