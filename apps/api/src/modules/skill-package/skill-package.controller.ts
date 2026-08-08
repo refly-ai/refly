@@ -41,6 +41,7 @@ import {
   SkillExecutionResult,
   CreateSkillPackageCliDto,
   CreateSkillPackageCliResponse,
+  PublishSkillDto,
 } from './skill-package.dto';
 import { SKILL_CLI_ERROR_CODES, throwCliError, mapErrorToCliCode } from './skill-package.errors';
 
@@ -143,8 +144,9 @@ export class SkillPackageController {
   async publishSkill(
     @Req() req: any,
     @Param('skillId') skillId: string,
+    @Body() body?: PublishSkillDto,
   ): Promise<SkillPackageResponse> {
-    return this.skillPackageService.publishSkillPackage(req.user, skillId);
+    return this.skillPackageService.publishSkillPackage(req.user, skillId, body);
   }
 
   @Post(':skillId/unpublish')
