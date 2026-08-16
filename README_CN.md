@@ -373,7 +373,7 @@ https://docs.refly.ai/community/contact-us
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=refly-ai/refly&type=Date)](https://star-history.com/#refly-ai/refly&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=refly-ai/refly&type=Date)](https://star-history.dera.page/#refly-ai/refly&Date)
 
 ## 许可证
 
