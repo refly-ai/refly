@@ -1,6 +1,18 @@
 {
   "providers": [
     {
+      "name": "SSYCloud",
+      "providerKey": "openai",
+      "baseUrl": "https://router.shengsuanyun.com/api/v1",
+      "description": {
+        "en": "SSYCloud is an API router providing unified access to 300+ LLM and multimodal models.",
+        "zh-CN": "胜算云是一个 API 路由服务，为 300 多个大语言模型和多模态模型提供统一接入。"
+      },
+      "categories": ["llm"],
+      "documentation": "https://lean.shengsuanyun.com/apidocs/guides/quick-start",
+      "icon": "https://avatars.githubusercontent.com/u/204312386?s=200&v=4"
+    },
+    {
       "name": "PPIO",
       "providerKey": "openai",
       "baseUrl": "https://api.ppinfra.com/v3/openai",
