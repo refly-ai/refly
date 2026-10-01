@@ -1,8 +1,9 @@
 import { safeParseURL } from './url';
 import { load } from 'cheerio';
+import { safeFetch } from './safe-fetch';
 
 export const scrapeWeblink = async (url: string) => {
-  const res = await fetch(url);
+  const res = await safeFetch(url);
   const html = await res.text();
   const $ = load(html);
 

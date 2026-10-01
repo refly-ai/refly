@@ -34,5 +34,9 @@
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"],
-  "references": [{ "path": "../openapi-schema" }, { "path": "../common-types" }]
+  "references": [
+    { "path": "../openapi-schema" },
+    { "path": "../common-types" },
+    { "path": "../errors" }
+  ]
 }
