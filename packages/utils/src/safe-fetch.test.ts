@@ -2,7 +2,7 @@ import { createServer } from 'node:http';
 import net, { type LookupFunction, type TcpNetConnectOpts } from 'node:net';
 import type { LookupAddress, LookupAllOptions } from 'node:dns';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ParamsError } from '@refly/errors';
+import { ConnectionError, ParamsError } from '@refly/errors';
 import ipaddr from 'ipaddr.js';
 import { Agent, Response, fetch } from 'undici';
 import { safeFetch } from './safe-fetch';
@@ -59,6 +59,23 @@ async function expectBlocked(input: string) {
   }
 }
 
+async function expectConnectionFailure(input: string) {
+  try {
+    await safeFetch(input);
+    expect.fail('Expected a connection failure');
+  } catch (error) {
+    expect(error).toBeInstanceOf(ConnectionError);
+    const failed = error as ConnectionError & { cause?: unknown };
+    expect(failed.code).toBe('E0001');
+    expect(failed.message).toBe('Cannot connect to the URL destination');
+    expect(failed.cause).toBeUndefined();
+    const details = `${failed.message}\n${failed.stack}\n${JSON.stringify(failed)}`;
+    for (const secret of ['PRIVATE_SENTINEL', input, '93.184.216.34']) {
+      expect(details).not.toContain(secret);
+    }
+  }
+}
+
 beforeEach(() => {
   network.lookup.mockReset().mockImplementation((_hostname, options, callback) => {
     expect(options).toEqual({ all: true, verbatim: true });
@@ -84,7 +101,10 @@ describe('safeFetch destination policy', () => {
     'https://[::ffff:93.184.216.34]',
     'http://public.example',
     'https://public.example',
-  ])('allows public HTTP(S): %s', async (url) => {
+    'https://127.0.0.1@public.example',
+    'https://PRIVATE_SENTINEL:password@public.example',
+    `https://public.example/image?signature=${'PRIVATE_SENTINEL'.repeat(1000)}`,
+  ])('passes public HTTP(S) destinations to fetch: %s', async (url) => {
     expect(await (await safeFetch(url)).text()).toBe('public content');
   });
 
@@ -142,14 +162,13 @@ describe('safeFetch destination policy', () => {
     'http://[::1',
     'http://%ff/PRIVATE_SENTINEL',
     'http://[fe80::1%25lo0]',
-    'https://PRIVATE_SENTINEL:password@public.example',
-    `https://public.example/${'PRIVATE_SENTINEL'.repeat(1000)}`,
+    'https://public.example@127.0.0.1/PRIVATE_SENTINEL',
     null,
     undefined,
     123,
     {},
     ['https://public.example'],
-  ])('rejects invalid syntax, encodings, types and oversized URLs: %s', async (input) => {
+  ])('rejects invalid syntax, encodings and types: %s', async (input) => {
     await expectBlocked(input as string);
     expect(network.fetch).not.toHaveBeenCalled();
   });
@@ -211,17 +230,59 @@ describe('safeFetch destination policy', () => {
     expect(network.lookup).toHaveBeenCalledTimes(1);
   });
 
-  it('normalizes DNS and connection failures without unsafe causes', async () => {
+  it('normalizes DNS failures as connection errors without unsafe causes', async () => {
     network.lookup.mockImplementation((_host, _options, callback) => {
-      callback(new Error('PRIVATE_SENTINEL DNS failure'), []);
+      callback(Object.assign(new Error('PRIVATE_SENTINEL DNS failure'), { code: 'ENOTFOUND' }), []);
     });
-    await expectBlocked('https://public.example');
+    const original = await vi.importActual<typeof import('undici')>('undici');
+    network.fetch.mockImplementation(original.fetch);
+    await expectConnectionFailure('https://public.example/PRIVATE_SENTINEL');
+  });
+
+  it.each(['ECONNRESET', 'CERT_HAS_EXPIRED', 'UND_ERR_CONNECT_TIMEOUT'])(
+    'normalizes %s after safe DNS validation without unsafe causes',
+    async (code) => {
+      // Exercise real undici error wrapping after checked lookup, without dialing.
+      const dial = vi.spyOn(net, 'connect').mockImplementation(((options: TcpNetConnectOpts) => {
+        const socket = new net.Socket();
+        expect(options.lookup).toBe(connection.lookup);
+        options.lookup!(options.host!, { all: true }, (error, addresses) => {
+          expect(error).toBeNull();
+          expect(addresses).toEqual([{ address: '93.184.216.34', family: 4 }]);
+          socket.destroy(
+            Object.assign(new Error(`PRIVATE_SENTINEL ${code}`), {
+              code,
+              cause: new Error('93.184.216.34 PRIVATE_SENTINEL'),
+            }),
+          );
+        });
+        return socket;
+      }) as typeof net.connect);
+      const original = await vi.importActual<typeof import('undici')>('undici');
+      network.fetch.mockImplementation(original.fetch);
+      try {
+        await expectConnectionFailure('http://public.example/PRIVATE_SENTINEL');
+        expect(network.lookup).toHaveBeenCalledOnce();
+      } finally {
+        dial.mockRestore();
+      }
+    },
+  );
+
+  it('preserves a policy rejection wrapped by undici', async () => {
     network.fetch.mockRejectedValue(
       Object.assign(new Error('PRIVATE_SENTINEL'), {
-        cause: new Error('PRIVATE_SENTINEL resolved address'),
+        cause: new ParamsError('PRIVATE_SENTINEL resolved address'),
       }),
     );
     await expectBlocked('https://public.example');
+  });
+
+  it('keeps the underlying fetch credential restriction without leaking userinfo', async () => {
+    const original = await vi.importActual<typeof import('undici')>('undici');
+    network.fetch.mockImplementation(original.fetch);
+    await expectConnectionFailure('https://PRIVATE_SENTINEL:password@public.example');
+    expect(network.lookup).not.toHaveBeenCalled();
   });
 
   it('normalizes IP parser failures inside the socket lookup callback', async () => {
@@ -256,7 +317,6 @@ describe('redirects', () => {
     'http://[::ffff:127.0.0.1]/PRIVATE_SENTINEL',
     'file:///PRIVATE_SENTINEL',
     'http://[PRIVATE_SENTINEL',
-    `https://public.example/${'PRIVATE_SENTINEL'.repeat(1000)}`,
   ])('blocks unsafe redirects before the next request: %s', async (location) => {
     network.fetch.mockResolvedValueOnce(new Response(null, { status: 302, headers: { location } }));
     await expectBlocked('https://public.example');
@@ -290,7 +350,35 @@ describe('redirects', () => {
     expect(network.fetch).toHaveBeenCalledTimes(2);
   });
 
-  it('caps a redirect loop at five redirects', async () => {
+  it('preserves long signed redirect URLs', async () => {
+    const location = `https://public.example/image?signature=${'PRIVATE_SENTINEL'.repeat(1000)}`;
+    network.fetch.mockResolvedValueOnce(new Response(null, { status: 302, headers: { location } }));
+    expect(await (await safeFetch('https://public.example')).text()).toBe('public content');
+    expect(String(network.fetch.mock.calls[1][0])).toBe(location);
+  });
+
+  it('normalizes a redirect body cancellation failure as a connection error', async () => {
+    const redirect = new Response('body', { status: 302, headers: { location: '/next' } });
+    vi.spyOn(redirect.body!, 'cancel').mockRejectedValue(new Error('PRIVATE_SENTINEL'));
+    network.fetch.mockResolvedValueOnce(redirect);
+    await expectConnectionFailure('https://public.example/PRIVATE_SENTINEL');
+    expect(network.fetch).toHaveBeenCalledOnce();
+  });
+
+  it('allows twenty public redirects and validates every hop', async () => {
+    let requests = 0;
+    network.fetch.mockImplementation(async (input) => {
+      await resolveAtSocket(new URL(String(input)).hostname);
+      return requests++ < 20
+        ? new Response(null, { status: 302, headers: { location: '/next' } })
+        : new Response('public content');
+    });
+    expect(await (await safeFetch('https://public.example')).text()).toBe('public content');
+    expect(network.fetch).toHaveBeenCalledTimes(21);
+    expect(network.lookup).toHaveBeenCalledTimes(21);
+  });
+
+  it('caps a redirect loop at twenty redirects', async () => {
     network.fetch.mockImplementation(
       async () =>
         new Response(null, {
@@ -299,7 +387,7 @@ describe('redirects', () => {
         }),
     );
     await expectBlocked('https://public.example/loop');
-    expect(network.fetch).toHaveBeenCalledTimes(6);
+    expect(network.fetch).toHaveBeenCalledTimes(21);
   });
 
   it('preserves a non-redirect response and a redirect without Location', async () => {

@@ -1,4 +1,4 @@
-import { ParamsError } from '@refly/errors';
+import { ConnectionError, ParamsError } from '@refly/errors';
 import { safeFetch, scrapeWeblink } from '@refly/utils/server';
 import { MiscService } from './misc.service';
 
@@ -39,19 +39,30 @@ describe('MiscService untrusted downloads', () => {
     expect(guardedScrape).toHaveBeenCalledWith('https://public.example');
   });
 
-  it('propagates the guard rejection in both paths without uploading', async () => {
-    const blocked = new ParamsError('URL must resolve to a public HTTP(S) destination');
+  it.each([
+    {
+      name: 'policy rejection',
+      error: new ParamsError('URL must resolve to a public HTTP(S) destination'),
+      url: 'http://127.0.0.1',
+    },
+    {
+      name: 'connection failure',
+      error: new ConnectionError('Cannot connect to the URL destination'),
+      url: 'https://public.example',
+    },
+  ])('propagates $name in both paths without uploading', async ({ error: blocked, url }) => {
     guardedScrape.mockRejectedValue(blocked);
     guardedFetch.mockRejectedValue(blocked);
     const upload = jest.spyOn(service, 'uploadFile');
-    await expect(service.scrapeWeblink({ url: 'http://127.0.0.1' })).rejects.toBe(blocked);
-    await expect(
-      service.dumpFileFromURL({ uid: 'user' }, { url: 'http://127.0.0.1' }),
-    ).rejects.toBe(blocked);
+    await expect(service.scrapeWeblink({ url })).rejects.toBe(blocked);
+    await expect(service.dumpFileFromURL({ uid: 'user' }, { url })).rejects.toBe(blocked);
     expect(upload).not.toHaveBeenCalled();
   });
 
-  it('keeps binary bytes, filename, MIME type and upload context', async () => {
+  it.each([
+    'https://public.example/image?token=removed',
+    `https://public.example/image?signature=${'signed-token'.repeat(1000)}`,
+  ])('keeps binary bytes, filename, MIME type and upload context for %s', async (url) => {
     const bytes = new Uint8Array([0, 255, 1, 128]);
     // Only the Response methods used by this consumer are needed here.
     guardedFetch.mockResolvedValue({
@@ -64,13 +75,13 @@ describe('MiscService untrusted downloads', () => {
       await service.dumpFileFromURL(
         { uid: 'user' },
         {
-          url: 'https://public.example/image?token=removed',
+          url,
           entityId: 'resource',
           entityType: 'resource',
         },
       ),
     ).toEqual(uploaded);
-    expect(guardedFetch).toHaveBeenCalledWith('https://public.example/image?token=removed');
+    expect(guardedFetch).toHaveBeenCalledWith(url);
     expect(upload).toHaveBeenCalledWith(
       { uid: 'user' },
       {

@@ -1,13 +1,14 @@
 import { lookup } from 'node:dns';
 import { isIP } from 'node:net';
-import { ParamsError } from '@refly/errors';
+import { ConnectionError, ParamsError } from '@refly/errors';
 import ipaddr from 'ipaddr.js';
 import { Agent, fetch } from 'undici';
 
 const publicIPv6 = ipaddr.IPv6.parse('2000::');
 const redirects = new Set([301, 302, 303, 307, 308]);
-const maxRedirects = 5;
+const maxRedirects = 20;
 const errorMessage = 'URL must resolve to a public HTTP(S) destination';
+const connectionErrorMessage = 'Cannot connect to the URL destination';
 
 function isPublicAddress(address: string): boolean {
   try {
@@ -32,11 +33,11 @@ const dispatcher = new Agent({
       // This is the socket's lookup: only checked addresses reach connect().
       // Check all answers so a mixed public/private DNS response fails closed.
       lookup(hostname, { all: true, verbatim: true }, (error, addresses) => {
-        if (
-          error ||
-          !addresses?.length ||
-          addresses.some(({ address }) => !isPublicAddress(address))
-        ) {
+        if (error) {
+          callback(new ConnectionError(connectionErrorMessage), '', 0);
+          return;
+        }
+        if (!addresses?.length || addresses.some(({ address }) => !isPublicAddress(address))) {
           callback(new ParamsError(errorMessage), '', 0);
           return;
         }
@@ -53,8 +54,8 @@ const dispatcher = new Agent({
 /** Server-only GET for untrusted URLs, including every redirect destination. */
 export async function safeFetch(input: string) {
   try {
-    // Reject coercion of non-string input and bound URL parsing work.
-    if (typeof input !== 'string' || input.length > 8192) {
+    // Reject coercion of non-string input without restricting signed URL length.
+    if (typeof input !== 'string') {
       throw new ParamsError(errorMessage);
     }
     let url = new URL(input);
@@ -62,25 +63,39 @@ export async function safeFetch(input: string) {
       const hostname = url.hostname.startsWith('[') ? url.hostname.slice(1, -1) : url.hostname;
       if (
         !['http:', 'https:'].includes(url.protocol) ||
-        url.username ||
-        url.password ||
         (isIP(hostname) && !isPublicAddress(hostname))
       ) {
         throw new ParamsError(errorMessage);
       }
-      const response = await fetch(url, { dispatcher, redirect: 'manual' });
+      const response = await fetch(url, { dispatcher, redirect: 'manual' }).catch(
+        (error: unknown) => {
+          // Undici wraps socket lookup policy rejections in a fetch error's cause.
+          if (
+            error instanceof ParamsError ||
+            (error instanceof Error && 'cause' in error && error.cause instanceof ParamsError)
+          ) {
+            throw new ParamsError(errorMessage);
+          }
+          throw new ConnectionError(connectionErrorMessage);
+        },
+      );
       const location = response.headers.get('location');
       if (!redirects.has(response.status) || !location) {
         return response;
       }
-      await response.body?.cancel();
-      if (hop === maxRedirects || location.length > 8192) {
+      await response.body?.cancel().catch(() => {
+        throw new ConnectionError(connectionErrorMessage);
+      });
+      if (hop === maxRedirects) {
         throw new ParamsError(errorMessage);
       }
       url = new URL(location, url);
     }
-  } catch {
+  } catch (error) {
     // Do not expose the input, DNS answers, or undici's chained connection error.
+    if (error instanceof ConnectionError) {
+      throw new ConnectionError(connectionErrorMessage);
+    }
     throw new ParamsError(errorMessage);
   }
   throw new ParamsError(errorMessage);
