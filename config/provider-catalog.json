@@ -1,6 +1,18 @@
 {
   "providers": [
     {
+      "name": "Cheaper Inference",
+      "providerKey": "openai",
+      "baseUrl": "https://api.cheaperinference.com/v1",
+      "description": {
+        "en": "Cheaper Inference is an OpenAI-compatible LLM gateway. One API key gives access to models from several labs.",
+        "zh-CN": "Cheaper Inference 是兼容 OpenAI 的大模型网关，一个 API 密钥即可调用多家厂商的模型。"
+      },
+      "categories": ["llm"],
+      "documentation": "https://cheaperinference.com/docs",
+      "icon": "https://www.cheaperinference.com/icon.svg"
+    },
+    {
       "name": "PPIO",
       "providerKey": "openai",
       "baseUrl": "https://api.ppinfra.com/v3/openai",
