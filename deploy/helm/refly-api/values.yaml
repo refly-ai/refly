@@ -104,3 +104,8 @@ service:
       protocol: TCP
       port: 1234
       targetPort: 1234
+
+# Optional workload placement; empty defaults preserve existing scheduling.
+nodeSelector: {}
+tolerations: []
+affinity: {}
