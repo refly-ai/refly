@@ -62,3 +62,8 @@ service:
   type: ClusterIP
   port: 80
   targetPort: 80
+
+# Optional workload placement; empty defaults preserve existing scheduling.
+nodeSelector: {}
+tolerations: []
+affinity: {}
