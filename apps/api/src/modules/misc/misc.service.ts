@@ -28,11 +28,11 @@ import path from 'node:path';
 import { ConfigService } from '@nestjs/config';
 import {
   omit,
-  scrapeWeblink,
   getSafeMimeType,
   runModuleInitWithTimeoutAndRetry,
   safeParseJSON,
 } from '@refly/utils';
+import { safeFetch, scrapeWeblink } from '@refly/utils/server';
 import { QUEUE_IMAGE_PROCESSING, QUEUE_CLEAN_STATIC_FILES, streamToBuffer } from '../../utils';
 import {
   CanvasNotFoundError,
@@ -174,7 +174,7 @@ export class MiscService implements OnModuleInit {
     },
   ): Promise<UploadResponse['data']> {
     const { url, entityId, entityType, visibility = 'private' } = param;
-    const res = await fetch(url);
+    const res = await safeFetch(url);
     const buffer = await res.arrayBuffer();
 
     // Extract filename from URL, removing query parameters and fragments
