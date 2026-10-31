@@ -1,4 +1,5 @@
 import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../common/prisma.service';
 import { RedisService } from '../common/redis.service';
 import { WorkflowAppService } from '../workflow-app/workflow-app.service';
@@ -60,6 +61,7 @@ export class WebhookService {
     private readonly redis: RedisService,
     private readonly workflowAppService: WorkflowAppService,
     private readonly canvasService: CanvasService,
+    private readonly config: ConfigService,
   ) {}
 
   /**
@@ -806,8 +808,8 @@ export class WebhookService {
    * Generate webhook URL
    */
   private generateWebhookUrl(webhookId: string): string {
-    // TODO: Get base URL from config
-    return `https://api.refly.ai/v1/openapi/webhook/${webhookId}/run`;
+    const baseUrl = this.config.get<string>('WEBHOOK_BASE_URL') || 'https://api.refly.ai';
+    return `${baseUrl}/v1/openapi/webhook/${webhookId}/run`;
   }
 }
 
