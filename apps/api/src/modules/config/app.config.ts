@@ -163,6 +163,7 @@ export default () => ({
         Number.parseInt(process.env.INVITATION_INVITEE_CREDIT_EXPIRES_IN_DAYS) || 7,
     },
     registration: {
+      enabled: process.env.AUTH_REGISTRATION_ENABLED !== 'false',
       bonusCreditAmount: Number.parseInt(process.env.REGISTRATION_BONUS_CREDIT_AMOUNT) || 500,
       bonusCreditExpiresInDays:
         Number.parseInt(process.env.REGISTRATION_BONUS_CREDIT_EXPIRES_IN_DAYS) || 7,
