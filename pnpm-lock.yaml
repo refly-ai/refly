@@ -1403,6 +1403,9 @@ importers:
       '@refly/common-types':
         specifier: workspace:*
         version: link:../common-types
+      '@refly/errors':
+        specifier: workspace:*
+        version: link:../errors
       '@refly/openapi-schema':
         specifier: workspace:*
         version: link:../openapi-schema
@@ -1418,6 +1421,9 @@ importers:
       deepmerge:
         specifier: ^4.3.1
         version: 4.3.1
+      ipaddr.js:
+        specifier: 2.2.0
+        version: 2.2.0
       kitoken:
         specifier: ^0.10.1
         version: 0.10.1
@@ -1445,6 +1451,9 @@ importers:
       tlds:
         specifier: ^1.255.0
         version: 1.259.0
+      undici:
+        specifier: 6.29.0
+        version: 6.29.0
       uuid:
         specifier: ^9.0.0
         version: 9.0.1
@@ -17758,6 +17767,10 @@ packages:
 
   undici@6.21.3:
     resolution: {integrity: sha512-gBLkYIlEnSp8pFbT64yFgGE6UIB9tAkhukC23PmMDCe5Nd+cRqKxSjw5y54MK2AZMgZfJWMaNE4nYUHgi1XEOw==}
+    engines: {node: '>=18.17'}
+
+  undici@6.29.0:
+    resolution: {integrity: sha512-R+RODBqp6i2pPflGdq+xIOUkl+RNfGgHwoinecKu/JCuf2uO06cOKoDbI2P7Dn6KcswdKwrczbU6IYJ6K8X+wg==}
     engines: {node: '>=18.17'}
 
   unicode-canonical-property-names-ecmascript@2.0.1:
@@ -39466,6 +39479,8 @@ snapshots:
   undici-types@7.16.0: {}
 
   undici@6.21.3: {}
+
+  undici@6.29.0: {}
 
   unicode-canonical-property-names-ecmascript@2.0.1: {}
 
