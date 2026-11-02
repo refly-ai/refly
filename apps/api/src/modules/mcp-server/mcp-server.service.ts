@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../common/prisma.service';
 import {
   DeleteMcpServerRequest,
@@ -34,14 +35,28 @@ export class McpServerService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly encryptionService: EncryptionService,
+    private readonly configService: ConfigService,
   ) {
     this.globalMcpServerCache = new SingleFlightCache(this.fetchGlobalMcpServerConfig.bind(this));
+  }
+
+  isEnabled(): boolean {
+    return this.configService.get<boolean>('mcp.enabled') === true;
+  }
+
+  private assertEnabled(): void {
+    if (!this.isEnabled()) {
+      throw new ForbiddenException('MCP is disabled');
+    }
   }
 
   /**
    * Fetch global MCP server configurations
    */
   async fetchGlobalMcpServerConfig(): Promise<GlobalMcpServerConfig> {
+    if (!this.isEnabled()) {
+      return { servers: [] };
+    }
     const servers = await this.prisma.mcpServer.findMany({
       where: {
         isGlobal: true,
@@ -117,6 +132,9 @@ export class McpServerService {
    * List MCP servers for a user
    */
   async listMcpServers(user: User, param: ListMcpServersData['query']) {
+    if (!this.isEnabled()) {
+      return [];
+    }
     const { enabled, type } = param;
     const servers = await this.prisma.mcpServer.findMany({
       where: {
@@ -143,6 +161,7 @@ export class McpServerService {
    * Create a new MCP server
    */
   async createMcpServer(user: User, param: UpsertMcpServerRequest) {
+    this.assertEnabled();
     const { name, type, url, command, args, env, headers, reconnect, config, enabled } = param;
 
     if (!name || !type) {
@@ -231,6 +250,7 @@ export class McpServerService {
    * Update an existing MCP server
    */
   async updateMcpServer(user: User, param: UpsertMcpServerRequest) {
+    this.assertEnabled();
     const name = param?.name;
     const originalName = param?.originalName ?? name;
     const type = param?.type;
@@ -303,6 +323,7 @@ export class McpServerService {
    * Delete an MCP server
    */
   async deleteMcpServer(user: User, param: DeleteMcpServerRequest) {
+    this.assertEnabled();
     const { name } = param;
 
     if (!name) {
@@ -381,6 +402,7 @@ export class McpServerService {
    * Ensures the server can be properly connected and initialized
    */
   async validateMcpServer(_user: User, param: UpsertMcpServerRequest) {
+    this.assertEnabled();
     const { name, type, url, command, args } = param;
 
     // Basic parameter validation

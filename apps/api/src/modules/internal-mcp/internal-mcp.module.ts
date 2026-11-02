@@ -12,13 +12,14 @@ import { ProviderModule } from '../provider/provider.module';
 import { CommonModule } from '../common/common.module';
 import { MediaGeneratorModule } from '../media-generator/media-generator.module';
 import { ActionModule } from '../action/action.module';
+import { McpEnabledGuard } from '../mcp-server/mcp-enabled.guard';
 
 @Module({
   imports: [
     McpModule.forRoot({
       name: 'refly-mcp-server',
       version: '1.0.0',
-      guards: [JwtAuthGuard], // Use JwtAuthGuard to protect MCP endpoints
+      guards: [McpEnabledGuard, JwtAuthGuard],
       transport: McpTransportType.STREAMABLE_HTTP, // Use Streamable HTTP transport
       // Default endpoint is /mcp
     }),
@@ -37,6 +38,7 @@ import { ActionModule } from '../action/action.module';
     MediaGeneratorTools,
     ProviderQueryTools,
     JwtAuthGuard,
+    McpEnabledGuard,
   ],
   exports: [InternalMcpService],
 })

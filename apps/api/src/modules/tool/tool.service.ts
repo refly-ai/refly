@@ -1467,7 +1467,7 @@ export class ToolService {
   ): Promise<{ tools: StructuredToolInterface[]; cleanup: () => Promise<void> }> {
     const noopCleanup = async () => undefined;
 
-    if (!mcpServers?.length) {
+    if (!this.mcpServerService.isEnabled() || !mcpServers?.length) {
       return { tools: [], cleanup: noopCleanup };
     }
 

@@ -1,6 +1,10 @@
 import path from 'node:path';
 
 export default () => ({
+  mcp: {
+    // MCP requires explicit opt-in, including when upgrading an existing deployment.
+    enabled: process.env.MCP_ENABLED === 'true',
+  },
   port: Number.parseInt(process.env.PORT) || 5800,
   wsPort: Number.parseInt(process.env.WS_PORT) || 5801,
   origin: process.env.ORIGIN || 'http://localhost:5700',
