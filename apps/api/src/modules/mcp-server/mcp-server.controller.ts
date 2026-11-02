@@ -14,8 +14,10 @@ import {
 } from '@refly/openapi-schema';
 import { buildSuccessResponse } from '../../utils/response';
 import { mcpServerPO2DTO } from './mcp-server.dto';
+import { McpEnabledGuard } from './mcp-enabled.guard';
 
 @Controller('v1/mcp-server')
+@UseGuards(McpEnabledGuard)
 export class McpServerController {
   constructor(private readonly mcpServerService: McpServerService) {}
 
