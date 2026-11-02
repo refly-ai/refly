@@ -1,4 +1,4 @@
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { randomBytes, createCipheriv, createDecipheriv, scryptSync } from 'node:crypto';
 import argon2 from 'argon2';
 import ms from 'ms';
@@ -53,6 +53,12 @@ export class AuthService {
     private notificationService: NotificationService,
     private creditService: CreditService,
   ) {}
+
+  private assertRegistrationEnabled() {
+    if (this.configService.get<boolean>('auth.registration.enabled') === false) {
+      throw new ForbiddenException('Registration is disabled');
+    }
+  }
 
   private getUserPreferences(): string {
     const requireInvitationCode =
@@ -482,6 +488,7 @@ export class AuthService {
         return user;
       }
 
+      this.assertRegistrationEnabled();
       targetUid = genUID();
       const name = await this.genUniqueUsername(email.split('@')[0]);
 
@@ -555,6 +562,7 @@ export class AuthService {
     email: string,
     password: string,
   ): Promise<{ tokenData?: TokenData; sessionId?: string }> {
+    this.assertRegistrationEnabled();
     const existingUser = await this.prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       throw new EmailAlreadyRegistered();
@@ -629,6 +637,9 @@ export class AuthService {
   }
 
   async createVerification({ email, purpose, password }: CreateVerificationRequest) {
+    if (purpose === 'signup') {
+      this.assertRegistrationEnabled();
+    }
     const sessionId = genVerificationSessionID();
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
@@ -694,6 +705,7 @@ export class AuthService {
 
     let user: UserModel;
     if (purpose === 'signup') {
+      this.assertRegistrationEnabled();
       const uid = genUID();
       const name = await this.genUniqueUsername(email.split('@')[0]);
       const [newUser] = await this.prisma.$transaction([
