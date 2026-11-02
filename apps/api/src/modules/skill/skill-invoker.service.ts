@@ -1935,11 +1935,11 @@ export class SkillInvokerService {
 
       await resultAggregator?.clearCache();
 
-      // Bill credits for successful completions and user aborts (partial usage should be charged)
-      const shouldBillCredits =
-        !!resultAggregator && (!result.errors.length || result.errorType === 'userAbort');
+      // Bill recorded usage for every terminal outcome; earlier model calls may have incurred cost.
+      
+        
 
-      if (shouldBillCredits && resultAggregator) {
+      if (resultAggregator) {
         await this.processCreditUsageReport(
           user,
           resultId,
