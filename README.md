@@ -380,7 +380,7 @@ For those who'd like to contribute code, see our [Contribution Guide](CONTRIBUTI
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=refly-ai/refly&type=Date)](https://star-history.com/#refly-ai/refly&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=refly-ai/refly&type=Date)](https://star-history.dera.page/#refly-ai/refly&Date)
 
 ## License
 
