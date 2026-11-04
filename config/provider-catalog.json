@@ -111,7 +111,7 @@
     {
       "name": "Hugging Face Inference",
       "providerKey": "openai",
-      "baseUrl": "https://api-inference.huggingface.co",
+      "baseUrl": "https://router.huggingface.co/v1",
       "description": {
         "en": "Hugging Face Inference provides access to a vast library of open-source AI models for various tasks, including text generation and embedding, through its Inference Providers API.",
         "zh-CN": "Hugging Face Inference 通过其 Inference Providers API 提供对庞大的开源 AI 模型库的访问，支持文本生成和嵌入等多种任务。"
