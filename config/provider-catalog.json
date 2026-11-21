@@ -335,6 +335,18 @@
       "categories": ["mediaGeneration"],
       "documentation": "https://fal.ai/docs",
       "icon": "https://static.refly.ai/icons/providers/fal.png"
+    },
+    {
+      "name": "321AI",
+      "providerKey": "openai",
+      "baseUrl": "https://321ai.cc/v1",
+      "description": {
+        "en": "321AI is a multi-merchant AI API relay with OpenAI- and Anthropic-compatible endpoints and a public per-model price list.",
+        "zh-CN": "321AI 是多商家 AI API 中转，兼容 OpenAI 与 Anthropic 接口，并提供公开的逐模型价格表。"
+      },
+      "categories": ["llm"],
+      "documentation": "https://321ai.cc/guides",
+      "icon": "https://321ai.cc/ui/new/brand/apple-touch-icon.png"
     }
   ]
 }
