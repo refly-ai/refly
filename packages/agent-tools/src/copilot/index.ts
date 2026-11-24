@@ -22,6 +22,74 @@ interface CopilotToolParams {
   reflyService: ReflyService;
 }
 
+// ============================================================================
+// Canvas Drift Detection
+// ============================================================================
+
+interface CanvasDrift {
+  hasDrift: boolean;
+  planTaskCount: number;
+  canvasWorkflowNodeCount: number;
+  missingFromCanvas: Array<{ taskId: string; title: string }>;
+  addedOnCanvas: Array<{ nodeId: string; title: string; taskId?: string }>;
+  summary: string;
+}
+
+function computeCanvasDrift(plan: WorkflowPlanRecord, canvasNodes: CanvasNode[]): CanvasDrift {
+  const planTaskIds = new Set((plan.tasks ?? []).map((t) => t.id));
+
+  const canvasTaskIds = new Map<string, CanvasNode>();
+  const canvasWorkflowNodes: CanvasNode[] = [];
+
+  for (const node of canvasNodes) {
+    if (node.type === 'skillResponse') {
+      canvasWorkflowNodes.push(node);
+      const taskId = (node.data?.metadata as Record<string, unknown>)?.taskId as string | undefined;
+      if (taskId) {
+        canvasTaskIds.set(taskId, node);
+      }
+    }
+  }
+
+  const missingFromCanvas = (plan.tasks ?? [])
+    .filter((t) => !canvasTaskIds.has(t.id))
+    .map((t) => ({ taskId: t.id, title: t.title }));
+
+  const addedOnCanvas = canvasWorkflowNodes
+    .filter((n) => {
+      const taskId = (n.data?.metadata as Record<string, unknown>)?.taskId as string | undefined;
+      return !taskId || !planTaskIds.has(taskId);
+    })
+    .map((n) => ({
+      nodeId: n.id,
+      title: n.data?.title ?? '',
+      taskId: (n.data?.metadata as Record<string, unknown>)?.taskId as string | undefined,
+    }));
+
+  const hasDrift = missingFromCanvas.length > 0 || addedOnCanvas.length > 0;
+
+  let summary = 'Plan and canvas are in sync.';
+  if (hasDrift) {
+    const parts: string[] = [];
+    if (missingFromCanvas.length > 0) {
+      parts.push(`${missingFromCanvas.length} plan task(s) removed from canvas`);
+    }
+    if (addedOnCanvas.length > 0) {
+      parts.push(`${addedOnCanvas.length} node(s) added to canvas outside plan`);
+    }
+    summary = `Drift detected: ${parts.join('; ')}.`;
+  }
+
+  return {
+    hasDrift,
+    planTaskCount: plan.tasks?.length ?? 0,
+    canvasWorkflowNodeCount: canvasWorkflowNodes.length,
+    missingFromCanvas,
+    addedOnCanvas,
+    summary,
+  };
+}
+
 export class GenerateWorkflow extends AgentBaseTool<CopilotToolParams> {
   name = 'generate_workflow';
   toolsetKey = 'copilot';
@@ -171,6 +239,40 @@ Notes:
         planId = latestPlan.planId;
       }
 
+      // Drift pre-check: ensure targeted tasks still exist on canvas
+      const canvasId = config.configurable?.canvasId;
+      if (canvasId) {
+        try {
+          const canvasData = await reflyService.getCanvasData(user, { canvasId });
+          const canvasTaskIds = new Set<string>();
+          for (const node of canvasData.nodes ?? []) {
+            if (node.type === 'skillResponse') {
+              const tid = (node.data?.metadata as Record<string, unknown>)?.taskId as
+                | string
+                | undefined;
+              if (tid) canvasTaskIds.add(tid);
+            }
+          }
+
+          const taskOps = input.operations.filter(
+            (op) => (op.op === 'updateTask' || op.op === 'deleteTask') && op.taskId,
+          );
+          const staleTaskOps = taskOps.filter((op) => !canvasTaskIds.has(op.taskId!));
+
+          if (staleTaskOps.length > 0) {
+            return {
+              status: 'error',
+              data: {
+                error: `Cannot patch: ${staleTaskOps.length} targeted task(s) no longer exist on canvas. Missing task IDs: ${staleTaskOps.map((op) => op.taskId).join(', ')}. The canvas may have been manually modified. Call get_workflow_summary to see drift details, or use generate_workflow to recreate.`,
+              },
+              summary: 'Patch failed due to canvas drift',
+            };
+          }
+        } catch {
+          // Non-critical: proceed with patch even if drift check fails
+        }
+      }
+
       const { resultId, version: resultVersion } = config.configurable ?? {};
 
       if (!resultId || typeof resultVersion !== 'number') {
@@ -279,6 +381,18 @@ Use this tool when you need to:
         };
       }
 
+      // Drift detection: compare plan tasks with actual canvas nodes
+      const canvasId = config.configurable?.canvasId;
+      let canvasDrift: CanvasDrift | undefined;
+      if (canvasId) {
+        try {
+          const canvasData = await this.params.reflyService.getCanvasData(user, { canvasId });
+          canvasDrift = computeCanvasDrift(plan, canvasData.nodes ?? []);
+        } catch {
+          // Non-critical: proceed without drift info
+        }
+      }
+
       return {
         status: 'success',
         data: {
@@ -300,8 +414,20 @@ Use this tool when you need to:
             variableType: v.variableType,
             required: v.required,
           })),
+          ...(canvasDrift && {
+            canvasDrift: {
+              hasDrift: canvasDrift.hasDrift,
+              summary: canvasDrift.summary,
+              ...(canvasDrift.hasDrift && {
+                missingFromCanvas: canvasDrift.missingFromCanvas,
+                addedOnCanvas: canvasDrift.addedOnCanvas,
+              }),
+            },
+          }),
         },
-        summary: `Successfully retrieved workflow plan summary for plan ID: ${plan.planId} and version: ${plan.version}`,
+        summary: canvasDrift?.hasDrift
+          ? `Retrieved workflow plan (${plan.planId} v${plan.version}). WARNING: ${canvasDrift.summary}`
+          : `Successfully retrieved workflow plan summary for plan ID: ${plan.planId} and version: ${plan.version}`,
       };
     } catch (e) {
       return {
