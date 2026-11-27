@@ -11,6 +11,7 @@ describe('SubscriptionWebhooks', () => {
           cancelAt: null,
         }),
         update: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
     };
     const webhooks = new SubscriptionWebhooks(
@@ -34,7 +35,7 @@ describe('SubscriptionWebhooks', () => {
 
     await webhooks.handleSubscriptionUpdated(updatedEvent('active'));
 
-    expect(prisma.subscription.update).not.toHaveBeenCalled();
+    expect(prisma.subscription.updateMany).not.toHaveBeenCalled();
   });
 
   it('still applies status changes to a subscription that is not canceled', async () => {
@@ -42,8 +43,8 @@ describe('SubscriptionWebhooks', () => {
 
     await webhooks.handleSubscriptionUpdated(updatedEvent('past_due'));
 
-    expect(prisma.subscription.update).toHaveBeenCalledWith({
-      where: { subscriptionId: 'sub_1' },
+    expect(prisma.subscription.updateMany).toHaveBeenCalledWith({
+      where: { subscriptionId: 'sub_1', status: { not: 'canceled' } },
       data: { status: 'past_due' },
     });
   });
