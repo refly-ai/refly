@@ -181,6 +181,14 @@ export class SubscriptionWebhooks {
       return;
     }
 
+    // A canceled subscription never comes back in Stripe. Stripe does not guarantee event order,
+    // so an older `customer.subscription.updated` can arrive after `customer.subscription.deleted`.
+    // Applying it would turn a canceled subscription back into an active one.
+    if (sub.status === 'canceled') {
+      this.logger.log(`Subscription ${sub.subscriptionId} already canceled, ignoring update`);
+      return;
+    }
+
     const updates: Prisma.SubscriptionUpdateInput = {};
 
     // Track status changes
@@ -200,8 +208,9 @@ export class SubscriptionWebhooks {
       this.logger.log(
         `Subscription ${sub.subscriptionId} received updates: ${JSON.stringify(updates)}`,
       );
-      await this.prisma.subscription.update({
-        where: { subscriptionId: subscription.id },
+      // Conditional write: a cancellation committed after the read above must not be overwritten.
+      await this.prisma.subscription.updateMany({
+        where: { subscriptionId: subscription.id, status: { not: 'canceled' } },
         data: updates,
       });
     }
